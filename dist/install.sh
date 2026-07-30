@@ -131,6 +131,8 @@ fi
 echo "✓ $APP_NAME has been installed and started."
 echo "✓ CLI is available as: processscope"
 echo "✓ Logs are available via: journalctl -u processscope"
+echo "✓ Application Logs stored at: /var/log/$APP_NAME/"
+echo "✓ Telemetry Database stored at: /var/lib/$APP_NAME/"
 echo ""
 echo -e "\033[1;35m🌐 Access the Dashboard at:\033[0m \033[4;34mhttp://$PRIMARY_IP:9876\033[0m"
 echo ""
