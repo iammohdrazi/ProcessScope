@@ -44,7 +44,7 @@ WorkingDirectory=/opt/processscope
 # Security hardening
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/var/log/processscope /var/lib/processscope /tmp/processscope
+ReadWritePaths=/var/log/processscope /var/lib/processscope
 ProtectHome=true
 NoNewPrivileges=false
 
