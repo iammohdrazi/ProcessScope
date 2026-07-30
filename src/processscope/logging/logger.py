@@ -119,7 +119,7 @@ class StructuredLogger:
     def _log(self, level: int, msg: str, exc_info: bool = False, **kwargs: Any) -> None:
         if self._logger.isEnabledFor(level):
             record = self._logger.makeRecord(
-                self._logger.name, level, "(unknown)", 0, msg, (), None
+                self._logger.name, level, "processscope", 0, msg, (), None
             )
             record._extra = kwargs  # type: ignore[attr-defined]
             if exc_info:
