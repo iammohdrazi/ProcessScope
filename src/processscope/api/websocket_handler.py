@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from processscope.api.server import app_state
+from processscope.api.state import app_state
 from processscope.collector.base import TelemetryEvent
 from processscope.logging import get_logger
 

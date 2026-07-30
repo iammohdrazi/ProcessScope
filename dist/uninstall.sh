@@ -29,6 +29,7 @@ echo "Removing systemd integration..."
 rm -f /usr/lib/systemd/system/processscope.service
 rm -f /etc/systemd/system/processscope.service
 systemctl daemon-reload
+systemctl reset-failed processscope || true
 
 # 3. Remove logrotate config
 rm -f /etc/logrotate.d/$APP_NAME

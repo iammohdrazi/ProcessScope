@@ -13,7 +13,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from processscope.api.server import app_state
+from processscope.api.state import app_state
 from processscope.process.metadata import collect_metadata
 from processscope.process.binary import analyze_binary
 from processscope.process.tree import build_process_tree, build_full_system_tree

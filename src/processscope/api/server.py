@@ -32,19 +32,7 @@ from processscope.version import get_build_info
 logger = get_logger("api.server")
 
 
-# ── Application State (shared across handlers) ───────────────────────
-
-class AppState:
-    """Global application state shared between API handlers."""
-    config: AppConfig
-    attacher: ProcessAttacher
-    engine: TelemetryEngine
-    store: TelemetryStore
-    build_info = get_build_info()
-
-
-app_state = AppState()
-
+from processscope.api.state import app_state
 
 # ── Lifespan ──────────────────────────────────────────────────────────
 
