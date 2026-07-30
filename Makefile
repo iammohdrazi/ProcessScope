@@ -63,7 +63,7 @@ version:
 venv:
 	@echo "━━━ Creating virtual environment ━━━"
 	$(PYTHON) -m venv $(VENV)
-	$(VENV_BIN)/pip install --upgrade pip setuptools wheel
+	$(VENV_BIN)/pip install --upgrade pip setuptools wheel build
 	@echo "✓ Virtual environment created at $(VENV)/"
 
 ## install: Install ProcessScope in development mode
@@ -78,7 +78,7 @@ dev: install
 	$(VENV_BIN)/processscope start --dev
 
 ## build: Build the production Python package
-build: dashboard
+build: venv dashboard
 	@echo "━━━ Building ProcessScope v$(VERSION) (build: $(BUILD_NUMBER)) ━━━"
 	@mkdir -p $(BUILD_DIR)
 	# Write build metadata
@@ -91,7 +91,7 @@ build: dashboard
 		echo "✓ Dashboard embedded"; \
 	fi
 	# Build wheel and sdist
-	$(PYTHON) -m build --outdir $(BUILD_DIR)
+	$(VENV_BIN)/python -m build --outdir $(BUILD_DIR)
 	@echo "✓ Build complete: $(BUILD_DIR)/"
 
 ## dashboard: Build the React web dashboard
