@@ -49,7 +49,21 @@ def _check_privileges() -> None:
 
 # ── Main CLI Group ────────────────────────────────────────────────────
 
-@click.group(invoke_without_command=True)
+def _get_display_host(host: str) -> str:
+    """Resolve 0.0.0.0 to the primary IP address for display."""
+    if host == "0.0.0.0":
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "localhost"
+    return host
+
+@click.group(invoke_without_command=True, context_settings=dict(help_option_names=['-h', '--help']))
 @click.option("--config", "-c", "config_path", type=click.Path(), default=None,
               help="Path to configuration file.")
 @click.option("--verbose", "-v", is_flag=True, default=False,
@@ -103,8 +117,8 @@ def start(ctx: click.Context, host: str | None, port: int | None,
     banner = Panel(
         f"[bold cyan]{build_info.display_name}[/bold cyan] v{build_info.version}\n"
         f"[dim]Build: {build_info.build_number}[/dim]\n\n"
-        f"[green]Dashboard:[/green]  http://{config.server.host}:{config.server.port}\n"
-        f"[green]API:[/green]        http://{config.server.host}:{config.server.port}/api/v1\n"
+        f"[green]Dashboard:[/green]  http://{_get_display_host(config.server.host)}:{config.server.port}\n"
+        f"[green]API:[/green]        http://{_get_display_host(config.server.host)}:{config.server.port}/api/v1\n"
         f"[green]Mode:[/green]       {'Development' if config.dev_mode else 'Production'}\n"
         f"[green]Log File:[/green]   {config.logging.file_path}/processscope.log\n"
         f"[green]Syslog:[/green]     {'Enabled' if config.logging.syslog_enabled else 'Disabled'}",
@@ -184,7 +198,7 @@ def attach(ctx: click.Context, pid: int | None, name: str | None,
         if resp.status_code == 200:
             data = resp.json()
             console.print(f"[green]✓ Attached to process {data.get('pid', pid or name)}[/green]")
-            console.print(f"  Dashboard: http://{config.server.host}:{config.server.port}")
+            console.print(f"  Dashboard: http://{_get_display_host(config.server.host)}:{config.server.port}")
         else:
             console.print(f"[red]✗ Failed to attach: {resp.text}[/red]")
             sys.exit(1)
@@ -245,7 +259,7 @@ def status(ctx: click.Context) -> None:
         table.add_row("Build", data.get("build_number", "?"))
         table.add_row("Uptime", data.get("uptime", "?"))
         table.add_row("Hooked Processes", str(data.get("hooked_count", 0)))
-        table.add_row("Dashboard", f"http://{config.server.host}:{config.server.port}")
+        table.add_row("Dashboard", f"http://{_get_display_host(config.server.host)}:{config.server.port}")
 
         console.print(table)
 

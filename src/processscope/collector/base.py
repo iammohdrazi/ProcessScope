@@ -197,6 +197,12 @@ class BaseCollector(ABC):
             except asyncio.CancelledError:
                 break
             except Exception as e:
+                import psutil
+                if isinstance(e, (psutil.NoSuchProcess, ProcessLookupError)) or "process PID not found" in str(e):
+                    self._logger.info("Process exited, collector stopping", pid=self._pid)
+                    self._status = CollectorStatus.STOPPED
+                    break
+
                 self._error_count += 1
                 self._last_error = str(e)
                 self._logger.error(
