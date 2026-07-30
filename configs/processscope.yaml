@@ -1,0 +1,73 @@
+# ProcessScope — Default Configuration
+# =====================================================
+# Location: /etc/processscope/processscope.yaml
+#
+# Environment variables override these values.
+# Prefix: PROCESSSCOPE_  |  Delimiter: __
+# Example: PROCESSSCOPE_SERVER__PORT=8080
+
+server:
+  # Host and port for the web dashboard and API
+  host: "0.0.0.0"
+  port: 9876
+  workers: 1
+  cors_origins:
+    - "*"
+
+telemetry:
+  # Collection interval in milliseconds
+  poll_interval_ms: 1000
+  # Internal event buffer size
+  buffer_size: 10000
+  # Active collectors
+  collectors:
+    - cpu
+    - memory
+    - thread
+    - network
+    - filesystem
+    - syscall
+    - hardware
+  # Enable eBPF-based collectors (requires kernel 5.8+ and CAP_BPF)
+  enable_ebpf: false
+
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  # Directory for application log files
+  file_path: "/var/log/processscope"
+  # Forward logs to syslog/journald
+  syslog_enabled: true
+  syslog_facility: "daemon"
+  syslog_identifier: "processscope"
+  # Use structured JSON format for file logs
+  json_format: true
+  # Log rotation
+  max_file_size_mb: 50
+  backup_count: 7
+
+storage:
+  # SQLite database for telemetry data
+  db_path: "/var/lib/processscope/db/processscope.db"
+  # Directory for recorded sessions
+  session_path: "/var/lib/processscope/sessions"
+  # Data retention period
+  retention_days: 7
+  # Maximum database size
+  max_db_size_mb: 500
+
+security:
+  # Read-only mode prevents any instrumentation
+  read_only_mode: false
+  # Require API key for dashboard access
+  require_auth: false
+  api_key: ""
+  # PID allowlist/denylist (empty = all allowed)
+  allowed_pids: []
+  denied_pids: []
+
+# Development mode (relaxed security, verbose logging)
+dev_mode: false
+
+# Plugin directory
+plugin_dir: "/opt/processscope/plugins"

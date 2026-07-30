@@ -1,0 +1,16 @@
+# ProcessScope — Logrotate Configuration
+# Install to: /etc/logrotate.d/processscope
+
+/var/log/processscope/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    sharedscripts
+    postrotate
+        systemctl reload processscope > /dev/null 2>&1 || true
+    endscript
+}

@@ -1,0 +1,65 @@
+# ============================================================
+# ProcessScope — systemd Service Unit
+# ============================================================
+# Install to: /usr/lib/systemd/system/processscope.service
+# Enable:     sudo systemctl enable processscope
+# Start:      sudo systemctl start processscope
+# Logs:       journalctl -u processscope -f
+# ============================================================
+
+[Unit]
+Description=ProcessScope — Linux Process Observability Platform
+Documentation=https://github.com/processscope/processscope
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Main executable
+ExecStart=/opt/processscope/venv/bin/processscope start
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=5
+
+# Logging: stdout/stderr → journald → /var/log/messages
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=processscope
+SyslogFacility=daemon
+
+# Environment
+Environment="PROCESSSCOPE_CONFIG_FILE=/etc/processscope/processscope.yaml"
+Environment="PYTHONUNBUFFERED=1"
+
+# Working directory
+WorkingDirectory=/opt/processscope
+
+# Security hardening
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/log/processscope /var/lib/processscope /tmp/processscope
+ProtectHome=true
+NoNewPrivileges=false
+
+# Required capabilities for process observation
+AmbientCapabilities=CAP_SYS_PTRACE CAP_SYS_ADMIN CAP_NET_ADMIN CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_SYS_PTRACE CAP_SYS_ADMIN CAP_NET_ADMIN CAP_DAC_READ_SEARCH CAP_BPF CAP_PERFMON
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitCORE=infinity
+
+# Timeout
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
