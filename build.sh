@@ -50,6 +50,24 @@ else
     echo "✓ All system dependencies satisfied."
 fi
 
+# Verify minimum versions
+echo "Verifying tool versions..."
+PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+if awk -v ver="$PY_VER" 'BEGIN { if (ver < 3.10) exit 1; exit 0 }'; then
+    echo "✓ Python version is $PY_VER (>= 3.10)"
+else
+    echo "❌ Error: Python 3.10 or higher is required. Found $PY_VER."
+    exit 1
+fi
+
+NODE_VER=$(npm -v | cut -d. -f1 2>/dev/null || echo "0")
+if [ "$NODE_VER" -lt 9 ]; then
+    echo "❌ Error: npm 9+ (Node 18+) is required to build the dashboard. Found npm $NODE_VER."
+    exit 1
+else
+    echo "✓ npm version is >= 9"
+fi
+
 # 2. Run the make pipeline
 echo "2. Starting build pipeline..."
 make clean

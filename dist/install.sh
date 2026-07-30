@@ -16,6 +16,21 @@ fi
 APP_NAME="processscope"
 echo "━━━ Installing $APP_NAME ━━━"
 
+# 0. Check system requirements
+echo "Checking system requirements..."
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "❌ Error: python3 is not installed on this system."
+    exit 1
+fi
+
+PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+if awk -v ver="$PY_VER" 'BEGIN { if (ver < 3.10) exit 1; exit 0 }'; then
+    echo "✓ Python version is $PY_VER (>= 3.10)"
+else
+    echo "❌ Error: Python 3.10 or higher is required. Found $PY_VER."
+    exit 1
+fi
+
 # 1. Create standard FHS directories
 echo "Creating system directories..."
 mkdir -p /opt/$APP_NAME/bin
