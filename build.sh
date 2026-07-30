@@ -33,7 +33,11 @@ if [ -n "$MISSING_PKGS" ]; then
     echo "Missing dependencies:$MISSING_PKGS"
     if command_exists apt-get; then
         echo "Attempting to install with apt-get (requires sudo)..."
-        sudo apt-get update
+        # Remove cdrom repos that frequently break apt-get update on fresh installs
+        if [ -f /etc/apt/sources.list ]; then
+            sudo sed -i '/cdrom/d' /etc/apt/sources.list || true
+        fi
+        sudo apt-get update || true
         sudo apt-get install -y $MISSING_PKGS
     elif command_exists dnf; then
         echo "Attempting to install with dnf (requires sudo)..."
