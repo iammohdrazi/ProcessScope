@@ -4,6 +4,7 @@ ProcessScope — Dual Logging System.
 Provides:
   - setup_logging(): Initialize the dual logging pipeline
   - get_logger(): Get a named logger instance
+  - PS codes: Structured error/status codes for consistent logging
 """
 
 from processscope.logging.logger import setup_logging, get_logger

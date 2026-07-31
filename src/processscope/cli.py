@@ -19,10 +19,13 @@ from pathlib import Path
 
 import click
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 
 from processscope.version import get_build_info
+from processscope.logging.error_codes import (
+    PS100, PS101, PS110, PS111, PS150, PS151,
+    PS200, PS201, PS300, PS303, PS305
+)
 
 console = Console()
 
@@ -113,24 +116,18 @@ def start(ctx: click.Context, host: str | None, port: int | None,
 
     build_info = get_build_info()
 
-    # Print startup banner
-    banner = Panel(
-        f"[bold cyan]{build_info.display_name}[/bold cyan] v{build_info.version}\n"
-        f"[dim]Build: {build_info.build_number}[/dim]\n\n"
-        f"[green]Dashboard:[/green]  http://{_get_display_host(config.server.host)}:{config.server.port}\n"
-        f"[green]API:[/green]        http://{_get_display_host(config.server.host)}:{config.server.port}/api/v1\n"
-        f"[green]Mode:[/green]       {'Development' if config.dev_mode else 'Production'}\n"
-        f"[green]Log File:[/green]   {config.logging.file_path}/processscope.log\n"
-        f"[green]Syslog:[/green]     {'Enabled' if config.logging.syslog_enabled else 'Disabled'}",
-        title="[bold]🔬 ProcessScope Starting[/bold]",
-        border_style="cyan",
-        width=64,
-    )
-    console.print(banner)
+    # Print simple plain-text startup banner
+    print(f"ProcessScope v{build_info.version} (build: {build_info.build_number})")
+    print(f"Dashboard:  http://{_get_display_host(config.server.host)}:{config.server.port}")
+    print(f"API:        http://{_get_display_host(config.server.host)}:{config.server.port}/api/v1")
+    print(f"Mode:       {'Development' if config.dev_mode else 'Production'}")
+    print(f"Log File:   {config.logging.file_path}/processscope.log")
+    print(f"Syslog:     {'Enabled' if config.logging.syslog_enabled else 'Disabled'}")
+    print()
 
     # Log startup to both syslog and file
     logger.info(
-        "ProcessScope starting",
+        PS100,
         version=build_info.version,
         build=build_info.build_number,
         host=config.server.host,
@@ -141,8 +138,8 @@ def start(ctx: click.Context, host: str | None, port: int | None,
     # Register signal handlers
     def _shutdown_handler(signum: int, frame: object) -> None:
         sig_name = signal.Signals(signum).name
-        logger.info(f"Received {sig_name}, shutting down gracefully...")
-        console.print(f"\n[yellow]Received {sig_name}, shutting down...[/yellow]")
+        logger.info(PS101, signal=sig_name)
+        print(f"\nReceived {sig_name}, shutting down...")
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, _shutdown_handler)
@@ -153,8 +150,8 @@ def start(ctx: click.Context, host: str | None, port: int | None,
         from processscope.api.server import run_server
         run_server(config, serve_dashboard=not no_dashboard)
     except Exception as e:
-        logger.error("Fatal error during startup", error=str(e), exc_info=True)
-        console.print(f"[red]✗ Fatal error: {e}[/red]")
+        logger.error(PS300, error=str(e), exc_info=True)
+        print(f"✗ Fatal error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -170,7 +167,7 @@ def attach(ctx: click.Context, pid: int | None, name: str | None,
            children: bool, read_only: bool) -> None:
     """Attach to a running process for observation."""
     if not pid and not name:
-        console.print("[red]✗ Specify either --pid or --name[/red]")
+        print("✗ Specify either --pid or --name", file=sys.stderr)
         sys.exit(1)
 
     _check_linux()
@@ -197,13 +194,13 @@ def attach(ctx: click.Context, pid: int | None, name: str | None,
         resp = httpx.post(api_url, json=payload, timeout=10.0)
         if resp.status_code == 200:
             data = resp.json()
-            console.print(f"[green]✓ Attached to process {data.get('pid', pid or name)}[/green]")
-            console.print(f"  Dashboard: http://{_get_display_host(config.server.host)}:{config.server.port}")
+            print(f"✓ Attached to process {data.get('pid', pid or name)}")
+            print(f"  Dashboard: http://{_get_display_host(config.server.host)}:{config.server.port}")
         else:
-            console.print(f"[red]✗ Failed to attach: {resp.text}[/red]")
+            print(f"✗ Failed to attach: {resp.text}", file=sys.stderr)
             sys.exit(1)
     except httpx.ConnectError:
-        console.print("[red]✗ ProcessScope agent is not running. Start it with: processscope start[/red]")
+        print("✗ ProcessScope agent is not running. Start it with: processscope start", file=sys.stderr)
         sys.exit(1)
 
 
@@ -224,12 +221,12 @@ def detach(ctx: click.Context, pid: int) -> None:
     try:
         resp = httpx.delete(api_url, timeout=10.0)
         if resp.status_code == 200:
-            console.print(f"[green]✓ Detached from process {pid}[/green]")
+            print(f"✓ Detached from process {pid}")
         else:
-            console.print(f"[red]✗ Failed to detach: {resp.text}[/red]")
+            print(f"✗ Failed to detach: {resp.text}", file=sys.stderr)
             sys.exit(1)
     except httpx.ConnectError:
-        console.print("[red]✗ ProcessScope agent is not running.[/red]")
+        print("✗ ProcessScope agent is not running.", file=sys.stderr)
         sys.exit(1)
 
 
@@ -249,43 +246,27 @@ def status(ctx: click.Context) -> None:
     try:
         resp = httpx.get(api_url, timeout=5.0)
         data = resp.json()
+        print("ProcessScope Status")
+        print("━━━━━━━━━━━━━━━━━━━")
+        print(f"Status:           {data.get('status', 'unknown')}")
+        print(f"Version:          {data.get('version', '?')}")
+        print(f"Build:            {data.get('build_number', '?')}")
+        print(f"Uptime:           {data.get('uptime', '?')}")
+        print(f"Hooked Processes: {data.get('hooked_count', 0)}")
+        print(f"Dashboard:        http://{_get_display_host(config.server.host)}:{config.server.port}")
 
-        table = Table(title="ProcessScope Status", border_style="cyan")
-        table.add_column("Property", style="bold")
-        table.add_column("Value")
-
-        table.add_row("Status", f"[green]{data.get('status', 'unknown')}[/green]")
-        table.add_row("Version", data.get("version", "?"))
-        table.add_row("Build", data.get("build_number", "?"))
-        table.add_row("Uptime", data.get("uptime", "?"))
-        table.add_row("Hooked Processes", str(data.get("hooked_count", 0)))
-        table.add_row("Dashboard", f"http://{_get_display_host(config.server.host)}:{config.server.port}")
-
-        console.print(table)
-
-        # Show hooked processes
         processes = data.get("hooked_processes", [])
         if processes:
-            proc_table = Table(title="Hooked Processes", border_style="green")
-            proc_table.add_column("PID", justify="right")
-            proc_table.add_column("Name")
-            proc_table.add_column("State")
-            proc_table.add_column("CPU %", justify="right")
-            proc_table.add_column("Memory", justify="right")
-
+            print("\nHooked Processes")
+            print("━━━━━━━━━━━━━━━━")
+            print(f"{'PID':<8} {'Name':<20} {'State':<15} {'CPU %':<8} {'Memory':<10}")
+            print("-" * 65)
             for proc in processes:
-                proc_table.add_row(
-                    str(proc.get("pid")),
-                    proc.get("name", "?"),
-                    proc.get("state", "?"),
-                    f"{proc.get('cpu_percent', 0):.1f}",
-                    proc.get("memory_human", "?"),
-                )
-            console.print(proc_table)
+                print(f"{proc.get('pid'):<8} {proc.get('name', '?')[:19]:<20} {proc.get('state', '?'):<15} {proc.get('cpu_percent', 0):<8.1f} {proc.get('memory_human', '?'):<10}")
 
     except httpx.ConnectError:
-        console.print("[red]✗ ProcessScope agent is not running.[/red]")
-        console.print("  Start it with: [cyan]sudo processscope start[/cyan]")
+        print("✗ ProcessScope agent is not running.", file=sys.stderr)
+        print("  Start it with: sudo processscope start", file=sys.stderr)
         sys.exit(1)
 
 
@@ -295,7 +276,7 @@ def status(ctx: click.Context) -> None:
 def version() -> None:
     """Print version and build information."""
     build_info = get_build_info()
-    console.print(build_info.format_banner())
+    print(build_info.format_banner())
 
 
 # ── Config Command ────────────────────────────────────────────────────
@@ -312,11 +293,11 @@ def config(ctx: click.Context, generate: bool, output: str | None) -> None:
     if generate:
         out_path = Path(output) if output else Path("processscope.yaml")
         write_default_config(out_path)
-        console.print(f"[green]✓ Default config written to {out_path}[/green]")
+        print(f"✓ Default config written to {out_path}")
     else:
         cfg = load_config(ctx.obj.get("config_path"))
         import yaml
-        console.print(yaml.dump(cfg.model_dump(), default_flow_style=False, sort_keys=False))
+        print(yaml.dump(cfg.model_dump(), default_flow_style=False, sort_keys=False))
 
 
 if __name__ == "__main__":

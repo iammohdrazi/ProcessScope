@@ -39,10 +39,10 @@ class ConnectionManager:
         self._subscriptions.pop(conn_id, None)
         logger.info("WebSocket disconnected", conn_id=conn_id)
 
-    def subscribe(self, conn_id: str, pid: int | None = None,
+    def subscribe(self, conn_id: str, pids: list[int] | None = None,
                   categories: list[str] | None = None) -> None:
         self._subscriptions[conn_id] = {
-            "pid": pid,
+            "pids": pids or [],
             "categories": categories or [],
         }
 
@@ -57,7 +57,7 @@ class ConnectionManager:
             sub = self._subscriptions.get(conn_id, {})
 
             # Filter by subscription
-            if sub.get("pid") is not None and event.pid != sub["pid"]:
+            if sub.get("pids") and event.pid not in sub["pids"]:
                 continue
             if sub.get("categories") and event.category.value not in sub["categories"]:
                 continue
@@ -84,7 +84,7 @@ async def telemetry_stream(websocket: WebSocket) -> None:
     WebSocket endpoint for live telemetry streaming.
 
     After connection, client can send JSON messages to control the stream:
-      {"action": "subscribe", "pid": 1234, "categories": ["cpu", "memory"]}
+      {"action": "subscribe", "pids": [1234, 5678], "categories": ["cpu", "memory"]}
       {"action": "unsubscribe"}
       {"action": "ping"}
     """
@@ -115,12 +115,16 @@ async def telemetry_stream(websocket: WebSocket) -> None:
                 action = msg.get("action", "")
 
                 if action == "subscribe":
-                    pid = msg.get("pid")
+                    pids = msg.get("pids", [])
+                    # Legacy support for single pid
+                    if "pid" in msg and msg["pid"] is not None:
+                        pids.append(msg["pid"])
+                    
                     categories = msg.get("categories", [])
-                    manager.subscribe(conn_id, pid=pid, categories=categories)
+                    manager.subscribe(conn_id, pids=pids, categories=categories)
                     await websocket.send_json({
                         "type": "subscribed",
-                        "pid": pid,
+                        "pids": pids,
                         "categories": categories,
                     })
 
@@ -163,7 +167,7 @@ async def telemetry_stream_pid(websocket: WebSocket, pid: int) -> None:
     """
     conn_id = uuid4().hex[:8]
     await manager.connect(websocket, conn_id)
-    manager.subscribe(conn_id, pid=pid)
+    manager.subscribe(conn_id, pids=[pid])
 
     async def _on_event(event: TelemetryEvent) -> None:
         await manager.broadcast_event(event)

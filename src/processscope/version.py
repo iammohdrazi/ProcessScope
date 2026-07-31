@@ -20,8 +20,8 @@ class BuildInfo:
 
     name: str = "processscope"
     display_name: str = "ProcessScope"
-    version: str = "0.1.0-dev"
-    build_number: str = "dev"
+    version: str = "0.1.0"
+    build_number: str = "local"
     git_commit: str = "unknown"
     git_branch: str = "unknown"
     build_date: str = "unknown"
@@ -71,8 +71,8 @@ def get_build_info() -> BuildInfo:
             with open(meta_path) as f:
                 data = json.load(f)
             return BuildInfo(
-                version=data.get("version", "0.1.0-dev"),
-                build_number=data.get("build_number", "dev"),
+                version=data.get("version", "0.1.0"),
+                build_number=data.get("build_number", "local"),
                 git_commit=data.get("git_commit", "unknown"),
                 git_branch=data.get("git_branch", "unknown"),
                 build_date=data.get("build_date", "unknown"),

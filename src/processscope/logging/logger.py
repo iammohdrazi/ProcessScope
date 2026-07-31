@@ -8,6 +8,7 @@ Two parallel logging channels:
    - Also writes to syslog via SysLogHandler → appears in /var/log/messages
    - Contains: service lifecycle, critical errors, security events
    - Facility: LOG_DAEMON, identifier: "processscope"
+   - Format: processscope[PS100]: message (key=value, ...)
 
 2. **Application File Logging**
    - Writes structured JSON to /var/log/processscope/*.log
@@ -54,6 +55,10 @@ class StructuredJSONFormatter(logging.Formatter):
             "thread": record.threadName,
         }
 
+        # Include PS code if present
+        if hasattr(record, "_ps_code"):
+            log_entry["code"] = record._ps_code  # type: ignore[attr-defined]
+
         # Add any extra structured fields
         if hasattr(record, "_extra"):
             log_entry["extra"] = record._extra  # type: ignore[attr-defined]
@@ -67,6 +72,38 @@ class StructuredJSONFormatter(logging.Formatter):
             }
 
         return json.dumps(log_entry, default=str)
+
+
+class PSCodeConsoleFormatter(logging.Formatter):
+    """
+    Plain-text console formatter for production mode (journald/syslog).
+
+    Produces clean, parseable output:
+        processscope[PS100]: ProcessScope service started (version=0.1.0)
+        processscope: Telemetry event collected
+
+    When no PS code is attached, uses the standard format:
+        processscope: <message> (key=value, ...)
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        msg = record.getMessage()
+
+        # Append extra fields if present
+        if hasattr(record, "_extra") and record._extra:  # type: ignore[attr-defined]
+            pairs = ", ".join(f"{k}={v}" for k, v in record._extra.items())  # type: ignore[attr-defined]
+            msg = f"{msg} ({pairs})"
+
+        # Use PS code if present
+        if hasattr(record, "_ps_code") and record._ps_code:  # type: ignore[attr-defined]
+            output = f"processscope[{record._ps_code}]: {msg}"  # type: ignore[attr-defined]
+        else:
+            output = f"processscope: {msg}"
+
+        if record.exc_info and record.exc_info[1]:
+            output += f"\n{self.formatException(record.exc_info)}"
+
+        return output
 
 
 class ConsoleFormatter(logging.Formatter):
@@ -96,6 +133,10 @@ class ConsoleFormatter(logging.Formatter):
             extras = " ".join(f"{k}={v}" for k, v in record._extra.items())  # type: ignore[attr-defined]
             msg += f" {self.DIM}| {extras}{self.RESET}"
 
+        # Show PS code in dev mode too
+        if hasattr(record, "_ps_code") and record._ps_code:  # type: ignore[attr-defined]
+            msg += f" {self.DIM}[{record._ps_code}]{self.RESET}"  # type: ignore[attr-defined]
+
         if record.exc_info and record.exc_info[1]:
             msg += f"\n{self.formatException(record.exc_info)}"
 
@@ -111,34 +152,48 @@ class StructuredLogger:
     Usage:
         logger = get_logger("collector.cpu")
         logger.info("CPU sample collected", pid=1234, usage=45.2)
+
+    With PS codes:
+        from processscope.logging.error_codes import PS100
+        logger.info(PS100, version="0.1.0")
     """
 
     def __init__(self, logger: logging.Logger) -> None:
         self._logger = logger
 
-    def _log(self, level: int, msg: str, exc_info: bool = False, **kwargs: Any) -> None:
+    def _log(self, level: int, msg: object, exc_info: bool = False, **kwargs: Any) -> None:
         if self._logger.isEnabledFor(level):
+            # Support PSCode objects
+            ps_code = None
+            from processscope.logging.error_codes import PSCode
+            if isinstance(msg, PSCode):
+                ps_code = msg.code
+                msg_str = msg.message
+            else:
+                msg_str = str(msg)
+
             record = self._logger.makeRecord(
-                self._logger.name, level, "processscope", 0, msg, (), None
+                self._logger.name, level, "processscope", 0, msg_str, (), None
             )
             record._extra = kwargs  # type: ignore[attr-defined]
+            record._ps_code = ps_code  # type: ignore[attr-defined]
             if exc_info:
                 record.exc_info = sys.exc_info()
             self._logger.handle(record)
 
-    def debug(self, msg: str, **kwargs: Any) -> None:
+    def debug(self, msg: object, **kwargs: Any) -> None:
         self._log(logging.DEBUG, msg, **kwargs)
 
-    def info(self, msg: str, **kwargs: Any) -> None:
+    def info(self, msg: object, **kwargs: Any) -> None:
         self._log(logging.INFO, msg, **kwargs)
 
-    def warning(self, msg: str, **kwargs: Any) -> None:
+    def warning(self, msg: object, **kwargs: Any) -> None:
         self._log(logging.WARNING, msg, **kwargs)
 
-    def error(self, msg: str, exc_info: bool = False, **kwargs: Any) -> None:
+    def error(self, msg: object, exc_info: bool = False, **kwargs: Any) -> None:
         self._log(logging.ERROR, msg, exc_info=exc_info, **kwargs)
 
-    def critical(self, msg: str, exc_info: bool = False, **kwargs: Any) -> None:
+    def critical(self, msg: object, exc_info: bool = False, **kwargs: Any) -> None:
         self._log(logging.CRITICAL, msg, exc_info=exc_info, **kwargs)
 
 
@@ -156,6 +211,8 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
 
     This sets up:
     1. Console handler (stdout) → captured by systemd → journald
+       - Production: PSCodeConsoleFormatter (plain text with PS codes)
+       - Development: ConsoleFormatter (colored, human-friendly)
     2. Syslog handler → /var/log/messages via rsyslog
     3. File handler → /var/log/processscope/processscope.log (JSON)
     4. Telemetry file handler → /var/log/processscope/telemetry.log (JSON)
@@ -174,7 +231,7 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
     if dev_mode:
         console_handler.setFormatter(ConsoleFormatter())
     else:
-        console_handler.setFormatter(StructuredJSONFormatter())
+        console_handler.setFormatter(PSCodeConsoleFormatter())
     console_handler.setLevel(logging.DEBUG if dev_mode else logging.INFO)
     root_logger.addHandler(console_handler)
 

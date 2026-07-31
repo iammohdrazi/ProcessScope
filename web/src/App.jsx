@@ -1,11 +1,15 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { Activity, Cpu, HardDrive, LayoutDashboard, Network, Search, Clock, Layers, Settings } from 'lucide-react';
+import { Cpu, HardDrive, LayoutDashboard, Network, Clock, Layers, Monitor, Moon, Sun } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import ProcessView from './pages/ProcessView';
 import Timeline from './pages/Timeline';
+import SystemInfo from './pages/SystemInfo';
+import { ThemeProvider, useTheme } from './ThemeContext';
 
 function Sidebar() {
+  const { theme, toggleTheme } = useTheme();
+  
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -35,7 +39,7 @@ function Sidebar() {
           <div className="nav-section-title">Telemetry</div>
           <NavLink to="/process/cpu" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Cpu className="nav-icon" size={18} />
-            CPU
+            CPU & Threads
           </NavLink>
           <NavLink to="/process/memory" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Layers className="nav-icon" size={18} />
@@ -47,32 +51,32 @@ function Sidebar() {
           </NavLink>
           <NavLink to="/process/filesystem" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <HardDrive className="nav-icon" size={18} />
-            File System
-          </NavLink>
-          <NavLink to="/process/activity" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Activity className="nav-icon" size={18} />
-            Activity
+            I/O & Files
           </NavLink>
         </div>
 
         <div className="nav-section" style={{ marginTop: 'auto' }}>
           <div className="nav-section-title">System</div>
-          <NavLink to="/search" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Search className="nav-icon" size={18} />
-            Search
-          </NavLink>
-          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Settings className="nav-icon" size={18} />
-            Settings
+          <NavLink to="/system" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <Monitor className="nav-icon" size={18} />
+            System Info
           </NavLink>
         </div>
       </nav>
 
-      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="status-dot online"></span>
           Agent Running
         </div>
+        
+        <button 
+          onClick={toggleTheme} 
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title="Toggle Theme"
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
       </div>
     </aside>
   );
@@ -80,19 +84,20 @@ function Sidebar() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div className="app-layout">
-        <Sidebar />
-        <main className="main-content animate-fade-in">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/process/:tab" element={<ProcessView />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/search" element={<Dashboard />} />
-            <Route path="/settings" element={<Dashboard />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <div className="app-layout">
+          <Sidebar />
+          <main className="main-content animate-fade-in">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/process/:tab" element={<ProcessView />} />
+              <Route path="/timeline" element={<Timeline />} />
+              <Route path="/system" element={<SystemInfo />} />
+            </Routes>
+          </main>
+        </div>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

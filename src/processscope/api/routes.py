@@ -13,6 +13,10 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+import os
+import platform
+import psutil
+
 from processscope.api.state import app_state
 from processscope.process.metadata import collect_metadata
 from processscope.process.binary import analyze_binary
@@ -260,6 +264,64 @@ async def search_events(
 
 
 # ── System ───────────────────────────────────────────────────────────
+
+@router.get("/system/info")
+async def get_system_info() -> dict:
+    """Get overall system and OS information."""
+    cpu_freq = psutil.cpu_freq()
+    mem = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    
+    # Get network interfaces (exclude loopback)
+    net_ifs = []
+    try:
+        stats = psutil.net_if_stats()
+        addrs = psutil.net_if_addrs()
+        for name, stat in stats.items():
+            if name != 'lo' and stat.isup:
+                ip = ""
+                if name in addrs:
+                    for addr in addrs[name]:
+                        if addr.family.name == 'AF_INET':
+                            ip = addr.address
+                            break
+                net_ifs.append({"name": name, "speed": stat.speed, "ip": ip})
+    except Exception:
+        pass
+
+    uptime_s = time.time() - psutil.boot_time()
+    
+    return {
+        "os": {
+            "system": platform.system(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "hostname": platform.node(),
+        },
+        "cpu": {
+            "physical_cores": psutil.cpu_count(logical=False),
+            "total_cores": psutil.cpu_count(logical=True),
+            "max_frequency": cpu_freq.max if cpu_freq else 0,
+        },
+        "memory": {
+            "total": mem.total,
+            "available": mem.available,
+            "used": mem.used,
+            "percent": mem.percent,
+        },
+        "disk": {
+            "total": disk.total,
+            "used": disk.used,
+            "free": disk.free,
+            "percent": disk.percent,
+        },
+        "network": net_ifs,
+        "load_avg": os.getloadavg() if hasattr(os, "getloadavg") else [0, 0, 0],
+        "uptime_seconds": uptime_s,
+    }
+
 
 @router.get("/system/tree")
 async def get_system_tree() -> dict:

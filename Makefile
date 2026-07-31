@@ -136,10 +136,8 @@ package-tar: build
 	@cp $(DIST_DIR)/systemd/processscope.service $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/
 	@cp $(DIST_DIR)/logrotate/processscope $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/
 	@cp $(DIST_DIR)/install.sh $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/
-	@cp $(DIST_DIR)/uninstall.sh $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/
 	@cp README.md $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/opt/$(APP_NAME)/share/doc/
 	@chmod +x $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/install.sh
-	@chmod +x $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/uninstall.sh
 	# Create tarball
 	@cd $(OUTPUT_DIR) && tar -czf $(APP_NAME)-$(VERSION)-$(OS)-$(ARCH).tar.gz $(APP_NAME)-$(VERSION)/
 	@rm -rf $(OUTPUT_DIR)/$(APP_NAME)-$(VERSION)/
