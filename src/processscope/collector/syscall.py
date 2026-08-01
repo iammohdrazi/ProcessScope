@@ -69,7 +69,10 @@ class SyscallCollector(BaseCollector):
             current_syscall = _read_current_syscall(self._pid)
 
             # Syscall-related stats from /proc/[pid]/status
-            proc = psutil.Process(self._pid)
+            proc = self._proc
+            if proc is None:
+                return events
+
             ctx = proc.num_ctx_switches()
 
             vol_rate = ctx.voluntary - self._prev_voluntary_cs if self._prev_voluntary_cs > 0 else 0

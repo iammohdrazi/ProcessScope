@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+import psutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -116,6 +117,7 @@ class BaseCollector(ABC):
         self._event_queue: Optional[asyncio.Queue[TelemetryEvent]] = None
         self._task: Optional[asyncio.Task] = None
         self._pid: int = 0
+        self._proc: Optional[psutil.Process] = None
         self._collect_count: int = 0
         self._error_count: int = 0
         self._last_error: str = ""
@@ -157,6 +159,7 @@ class BaseCollector(ABC):
             event_queue: Queue to emit events into (consumed by engine).
         """
         self._pid = pid
+        self._proc = psutil.Process(pid)
         self._event_queue = event_queue
         self._status = CollectorStatus.STARTING
 

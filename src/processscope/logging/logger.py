@@ -232,7 +232,7 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
         console_handler.setFormatter(ConsoleFormatter())
     else:
         console_handler.setFormatter(PSCodeConsoleFormatter())
-    console_handler.setLevel(logging.DEBUG if dev_mode else logging.INFO)
+    console_handler.setLevel(logging.DEBUG if dev_mode else logging.WARNING)
     root_logger.addHandler(console_handler)
 
     # ── 2. Syslog Handler (→ /var/log/messages) ──────────────────

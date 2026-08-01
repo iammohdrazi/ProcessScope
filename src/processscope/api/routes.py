@@ -128,6 +128,9 @@ async def attach_process(req: AttachRequest) -> dict:
                 read_only=req.read_only,
                 include_children=req.include_children,
             )
+            if not hooked_list:
+                raise ProcessLookupError(f"No processes found matching name '{req.name}'")
+
             for h in hooked_list:
                 await app_state.engine.start_collectors(h.pid)
                 app_state.engine.session_manager.start_recording(h.pid)

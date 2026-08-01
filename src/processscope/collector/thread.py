@@ -41,7 +41,9 @@ class ThreadCollector(BaseCollector):
         events: list[TelemetryEvent] = []
 
         try:
-            proc = psutil.Process(self._pid)
+            proc = self._proc
+            if proc is None:
+                return events
             threads = proc.threads()
             current_tids = {t.id for t in threads}
 

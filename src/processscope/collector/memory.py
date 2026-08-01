@@ -42,7 +42,10 @@ class MemoryCollector(BaseCollector):
         events: list[TelemetryEvent] = []
 
         try:
-            proc = psutil.Process(self._pid)
+            proc = self._proc
+            if proc is None:
+                return events
+
             mem = proc.memory_info()
             mem_full = proc.memory_full_info() if hasattr(proc, "memory_full_info") else None
             mem_percent = proc.memory_percent()

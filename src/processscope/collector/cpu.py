@@ -38,7 +38,9 @@ class CPUCollector(BaseCollector):
         events: list[TelemetryEvent] = []
 
         try:
-            proc = psutil.Process(self._pid)
+            proc = self._proc
+            if proc is None:
+                return events
 
             # Process CPU usage
             cpu_percent = proc.cpu_percent(interval=0)

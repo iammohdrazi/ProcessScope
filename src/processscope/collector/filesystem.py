@@ -43,7 +43,9 @@ class FilesystemCollector(BaseCollector):
         events: list[TelemetryEvent] = []
 
         try:
-            proc = psutil.Process(self._pid)
+            proc = self._proc
+            if proc is None:
+                return events
 
             # Open files
             open_files: list[dict[str, Any]] = []

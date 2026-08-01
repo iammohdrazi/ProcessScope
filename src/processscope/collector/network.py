@@ -38,7 +38,9 @@ class NetworkCollector(BaseCollector):
         events: list[TelemetryEvent] = []
 
         try:
-            proc = psutil.Process(self._pid)
+            proc = self._proc
+            if proc is None:
+                return events
             connections = proc.connections(kind="all")
 
             # Build connection data
