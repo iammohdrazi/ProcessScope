@@ -167,8 +167,8 @@ export default function Dashboard() {
                 data: { ...last.data } // Carry forward previous values
               };
               
-              // Update new point with new event data
-              if (!newPoint.data[d.pid]) newPoint.data[d.pid] = {};
+              // Deep copy the specific pid object to avoid mutating past points
+              newPoint.data[d.pid] = { ...(newPoint.data[d.pid] || {}) };
               
               if (d.category === 'cpu' && d.data.process) {
                 newPoint.data[d.pid].cpu = d.data.process.cpu_percent;
@@ -184,7 +184,9 @@ export default function Dashboard() {
               const next = [...prev];
               const curPoint = { ...next[next.length - 1] };
               curPoint.data = { ...curPoint.data };
-              if (!curPoint.data[d.pid]) curPoint.data[d.pid] = {};
+              
+              // Deep copy the specific pid object
+              curPoint.data[d.pid] = { ...(curPoint.data[d.pid] || {}) };
               
               if (d.category === 'cpu' && d.data.process) {
                 curPoint.data[d.pid].cpu = d.data.process.cpu_percent;
