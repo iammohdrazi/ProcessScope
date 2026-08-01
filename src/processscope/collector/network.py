@@ -46,8 +46,12 @@ class NetworkCollector(BaseCollector):
             current_keys: set[str] = set()
 
             for conn in connections:
-                laddr = f"{conn.laddr.ip}:{conn.laddr.port}" if conn.laddr else ""
-                raddr = f"{conn.raddr.ip}:{conn.raddr.port}" if conn.raddr else ""
+                laddr = ""
+                if conn.laddr:
+                    laddr = f"{conn.laddr.ip}:{conn.laddr.port}" if hasattr(conn.laddr, "ip") else str(conn.laddr)
+                raddr = ""
+                if conn.raddr:
+                    raddr = f"{conn.raddr.ip}:{conn.raddr.port}" if hasattr(conn.raddr, "ip") else str(conn.raddr)
                 conn_key = f"{conn.type}:{laddr}->{raddr}:{conn.status}"
                 current_keys.add(conn_key)
 

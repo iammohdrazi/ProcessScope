@@ -4,6 +4,256 @@ import { Cpu, MemoryStick, Network, HardDrive, Activity, AlertTriangle } from 'l
 
 const API_BASE = '/api/v1';
 
+function useTelemetry(pid, category) {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    if (!pid || !category) return;
+    async function fetchTelemetry() {
+      try {
+        const res = await fetch(`${API_BASE}/processes/${pid}/telemetry?category=${category}&limit=1`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.events && json.events.length > 0) {
+            setData(json.events[0].data);
+          }
+        }
+      } catch (e) {
+        console.error("Telemetry fetch error:", e);
+      }
+    }
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 2000);
+    return () => clearInterval(interval);
+  }, [pid, category]);
+  
+  return data;
+}
+
+function CpuTelemetryView({ pid }) {
+  const cpuData = useTelemetry(pid, 'cpu');
+  const threadData = useTelemetry(pid, 'thread');
+
+  if (!cpuData) return <div>Loading CPU data...</div>;
+
+  return (
+    <div style={{ textAlign: 'left' }}>
+      <div className="grid-3" style={{ marginBottom: '20px' }}>
+        <div className="card">
+          <div className="card-title">CPU Percent</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{cpuData.process?.cpu_percent}%</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Total Threads</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{cpuData.process?.num_threads}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Context Switches</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{cpuData.context_switches?.voluntary}</div>
+        </div>
+      </div>
+      
+      {threadData && threadData.threads && (
+        <div className="card">
+          <div className="card-title">Threads (Top 100)</div>
+          <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>TID</th>
+                  <th>Name</th>
+                  <th>State</th>
+                  <th>User Time</th>
+                  <th>System Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {threadData.threads.map(t => (
+                  <tr key={t.tid}>
+                    <td className="mono">{t.tid}</td>
+                    <td>{t.name || '-'}</td>
+                    <td>{t.state || '-'}</td>
+                    <td className="mono">{t.user_time}</td>
+                    <td className="mono">{t.system_time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemoryTelemetryView({ pid }) {
+  const memData = useTelemetry(pid, 'memory');
+  if (!memData) return <div>Loading Memory data...</div>;
+
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div style={{ textAlign: 'left' }}>
+      <div className="grid-3" style={{ marginBottom: '20px' }}>
+        <div className="card">
+          <div className="card-title">RSS Memory</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{formatBytes(memData.usage?.rss)}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">VMS Memory</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{formatBytes(memData.usage?.vms)}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Page Faults</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{memData.usage?.pfaults || 0}</div>
+        </div>
+      </div>
+      
+      {memData.maps && (
+        <div className="card">
+          <div className="card-title">Memory Maps (Top 100)</div>
+          <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Path</th>
+                  <th>Size</th>
+                  <th>RSS</th>
+                  <th>Permissions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memData.maps.map((m, idx) => (
+                  <tr key={idx}>
+                    <td className="mono" style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.path}>{m.path || '[anonymous]'}</td>
+                    <td className="mono">{formatBytes(m.size)}</td>
+                    <td className="mono">{formatBytes(m.rss)}</td>
+                    <td className="mono">{m.perms}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NetworkTelemetryView({ pid }) {
+  const netData = useTelemetry(pid, 'network');
+  if (!netData) return <div>Loading Network data...</div>;
+
+  return (
+    <div style={{ textAlign: 'left' }}>
+      <div className="grid-3" style={{ marginBottom: '20px' }}>
+        <div className="card">
+          <div className="card-title">Active Connections</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{netData.connection_count}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Send Rate</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{netData.io?.send_rate_human || '0 B/s'}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Receive Rate</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{netData.io?.recv_rate_human || '0 B/s'}</div>
+        </div>
+      </div>
+      
+      {netData.connections && (
+        <div className="card">
+          <div className="card-title">Connections</div>
+          <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Local Address</th>
+                  <th>Remote Address</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {netData.connections.map((c, idx) => (
+                  <tr key={idx}>
+                    <td>{c.family} / {c.type}</td>
+                    <td className="mono">{c.local_address}</td>
+                    <td className="mono">{c.remote_address}</td>
+                    <td>{c.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FileSystemTelemetryView({ pid }) {
+  const fsData = useTelemetry(pid, 'filesystem');
+  if (!fsData) return <div>Loading I/O data...</div>;
+
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div style={{ textAlign: 'left' }}>
+      <div className="grid-3" style={{ marginBottom: '20px' }}>
+        <div className="card">
+          <div className="card-title">Open Files</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{fsData.open_files_count}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Read Bytes</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{formatBytes(fsData.io?.read_bytes)}</div>
+        </div>
+        <div className="card">
+          <div className="card-title">Write Bytes</div>
+          <div style={{ fontSize: '1.5rem', marginTop: 10 }}>{formatBytes(fsData.io?.write_bytes)}</div>
+        </div>
+      </div>
+      
+      {fsData.open_files && (
+        <div className="card">
+          <div className="card-title">Open Files (Top 100)</div>
+          <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>FD</th>
+                  <th>Path</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fsData.open_files.map((f, idx) => (
+                  <tr key={idx}>
+                    <td className="mono">{f.fd}</td>
+                    <td className="mono" style={{ maxWidth: '500px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.path}>{f.path}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProcessView() {
   const { tab } = useParams();
   const [status, setStatus] = useState(null);
@@ -26,7 +276,6 @@ export default function ProcessView() {
   const title = titles[tab] || 'Telemetry';
   const Icon = icons[tab] || Activity;
 
-  // Fetch initial status and hooked processes
   useEffect(() => {
     async function fetchStatus() {
       try {
@@ -66,6 +315,27 @@ export default function ProcessView() {
     );
   }
 
+  const renderTabContent = () => {
+    if (!selectedPid) return null;
+    switch(tab) {
+      case 'cpu':
+        return <CpuTelemetryView pid={selectedPid} />;
+      case 'memory':
+        return <MemoryTelemetryView pid={selectedPid} />;
+      case 'network':
+        return <NetworkTelemetryView pid={selectedPid} />;
+      case 'filesystem':
+        return <FileSystemTelemetryView pid={selectedPid} />;
+      default:
+        return (
+          <div className="card" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <AlertTriangle size={32} style={{ marginBottom: 16, opacity: 0.5, color: 'var(--accent-yellow)' }} />
+            <p style={{ fontSize: '1.1rem', marginBottom: 8, color: 'var(--text-primary)' }}>Unknown Tab</p>
+          </div>
+        );
+    }
+  }
+
   return (
     <div className="animate-fade-in">
       <div className="page-header">
@@ -77,7 +347,6 @@ export default function ProcessView() {
           <p className="page-subtitle">Detailed {tab} monitoring for hooked processes</p>
         </div>
         
-        {/* Process Selector Dropdown */}
         {status?.hooked_processes && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Target Process:</span>
@@ -97,12 +366,7 @@ export default function ProcessView() {
         )}
       </div>
 
-      <div className="card" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-        <AlertTriangle size={32} style={{ marginBottom: 16, opacity: 0.5, color: 'var(--accent-yellow)' }} />
-        <p style={{ fontSize: '1.1rem', marginBottom: 8, color: 'var(--text-primary)' }}>Advanced Telemetry Under Construction</p>
-        <p style={{ fontSize: '0.9rem' }}>Deep inspection for {tab} will be enabled in Phase 4 updates.</p>
-        <p style={{ fontSize: '0.85rem', marginTop: 12 }}>Currently viewing summary data for PID <span className="mono" style={{ color: 'var(--accent-cyan)' }}>{selectedPid}</span> in Dashboard.</p>
-      </div>
+      {renderTabContent()}
     </div>
   );
 }

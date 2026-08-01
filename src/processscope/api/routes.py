@@ -268,8 +268,10 @@ async def search_events(
 @router.get("/system/info")
 async def get_system_info() -> dict:
     """Get overall system and OS information."""
+    import datetime
     cpu_freq = psutil.cpu_freq()
     mem = psutil.virtual_memory()
+    swap = psutil.swap_memory()
     disk = psutil.disk_usage('/')
     
     # Get network interfaces (exclude loopback)
@@ -289,7 +291,19 @@ async def get_system_info() -> dict:
     except Exception:
         pass
 
-    uptime_s = time.time() - psutil.boot_time()
+    boot_time = psutil.boot_time()
+    uptime_s = time.time() - boot_time
+    boot_time_str = datetime.datetime.fromtimestamp(boot_time).strftime("%Y-%m-%d %H:%M:%S")
+    
+    try:
+        users = [u.name for u in psutil.users()]
+    except Exception:
+        users = []
+        
+    try:
+        pids = len(psutil.pids())
+    except Exception:
+        pids = 0
     
     return {
         "os": {
@@ -310,6 +324,10 @@ async def get_system_info() -> dict:
             "available": mem.available,
             "used": mem.used,
             "percent": mem.percent,
+            "swap_total": swap.total,
+            "swap_used": swap.used,
+            "swap_free": swap.free,
+            "swap_percent": swap.percent,
         },
         "disk": {
             "total": disk.total,
@@ -320,6 +338,9 @@ async def get_system_info() -> dict:
         "network": net_ifs,
         "load_avg": os.getloadavg() if hasattr(os, "getloadavg") else [0, 0, 0],
         "uptime_seconds": uptime_s,
+        "boot_time": boot_time_str,
+        "users": users,
+        "process_count": pids,
     }
 
 

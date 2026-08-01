@@ -49,7 +49,7 @@ export default function SystemInfo() {
     return <div>Loading system info...</div>;
   }
 
-  const { os, cpu, memory, disk, network, load_avg, uptime_seconds } = sysInfo;
+  const { os, cpu, memory, disk, network, load_avg, uptime_seconds, boot_time, users, process_count } = sysInfo;
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 B';
@@ -98,8 +98,20 @@ export default function SystemInfo() {
                 <td className="mono">{os.machine}</td>
               </tr>
               <tr>
+                <td>Boot Time</td>
+                <td>{boot_time}</td>
+              </tr>
+              <tr>
                 <td>Uptime</td>
                 <td>{formatUptime(uptime_seconds)}</td>
+              </tr>
+              <tr>
+                <td>Users Logged In</td>
+                <td>{users ? users.length : 0}</td>
+              </tr>
+              <tr>
+                <td>Total Processes</td>
+                <td className="mono">{process_count}</td>
               </tr>
             </tbody>
           </table>
@@ -143,6 +155,18 @@ export default function SystemInfo() {
                 <td>Available RAM</td>
                 <td className="mono">{formatBytes(memory.available)} <span style={{ color: 'var(--text-tertiary)' }}>({(100 - memory.percent).toFixed(1)}%)</span></td>
               </tr>
+              {memory.swap_total > 0 && (
+                <>
+                  <tr>
+                    <td>Swap Total</td>
+                    <td className="mono">{formatBytes(memory.swap_total)}</td>
+                  </tr>
+                  <tr>
+                    <td>Swap Free</td>
+                    <td className="mono">{formatBytes(memory.swap_free)} <span style={{ color: 'var(--text-tertiary)' }}>({(100 - memory.swap_percent).toFixed(1)}%)</span></td>
+                  </tr>
+                </>
+              )}
               <tr>
                 <td>Root Disk Total</td>
                 <td className="mono">{formatBytes(disk.total)}</td>
