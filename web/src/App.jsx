@@ -1,10 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { Cpu, HardDrive, LayoutDashboard, Network, Clock, Layers, Monitor, Moon, Sun } from 'lucide-react';
+import { Cpu, HardDrive, LayoutDashboard, Network, Clock, Layers, Monitor, Moon, Sun, ListTree } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import ProcessView from './pages/ProcessView';
 import Timeline from './pages/Timeline';
 import SystemInfo from './pages/SystemInfo';
+import ProcessList from './pages/ProcessList';
 import { ThemeProvider, useTheme } from './ThemeContext';
 
 function Sidebar() {
@@ -28,6 +29,10 @@ function Sidebar() {
           <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <LayoutDashboard className="nav-icon" size={18} />
             Dashboard
+          </NavLink>
+          <NavLink to="/processes" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <ListTree className="nav-icon" size={18} />
+            Process List
           </NavLink>
           <NavLink to="/timeline" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Clock className="nav-icon" size={18} />
@@ -91,6 +96,7 @@ export default function App() {
           <main className="main-content animate-fade-in">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/processes" element={<ProcessList />} />
               <Route path="/process/:tab" element={<ProcessView />} />
               <Route path="/timeline" element={<Timeline />} />
               <Route path="/system" element={<SystemInfo />} />
