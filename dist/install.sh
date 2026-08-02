@@ -136,9 +136,15 @@ step "Installing Python package..."
 WHEEL_FILE=$(ls /opt/$APP_NAME/lib/$APP_NAME-*.whl 2>/dev/null | head -n 1)
 if [ -z "$WHEEL_FILE" ]; then
     echo "Error: Could not find .whl package in /opt/$APP_NAME/lib/"
+    echo "Contents of /opt/$APP_NAME/lib/:"
+    ls -la /opt/$APP_NAME/lib/ || true
     exit 1
 fi
-/opt/$APP_NAME/venv/bin/pip install "$WHEEL_FILE" > /dev/null 2>&1
+echo "        Installing $WHEEL_FILE"
+if ! /opt/$APP_NAME/venv/bin/pip install "$WHEEL_FILE"; then
+    echo "Error: Failed to install wheel package"
+    exit 1
+fi
 ln -sf /opt/$APP_NAME/venv/bin/processscope /usr/local/bin/processscope
 check_ok
 
