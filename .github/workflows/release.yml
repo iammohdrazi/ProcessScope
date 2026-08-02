@@ -129,23 +129,23 @@ jobs:
           - name: ubuntu-22.04
             image: ubuntu:22.04
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip --no-install-recommends
+            install_cmd: apt-get update && apt-get install -y python3.11 python3.11-venv python3-pip --no-install-recommends && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
           - name: ubuntu-24.04
             image: ubuntu:24.04
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip --no-install-recommends
+            install_cmd: apt-get update && apt-get install -y python3.12 python3.12-venv python3-pip --no-install-recommends && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
           - name: debian-11
             image: debian:11
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip --no-install-recommends
+            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip --no-install-recommends && apt-get install -y -t bullseye-backports python3.10 python3.10-venv 2>/dev/null || apt-get install -y python3 python3-venv python3-pip
           - name: debian-12
             image: debian:12
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip --no-install-recommends
+            install_cmd: apt-get update && apt-get install -y python3.11 python3.11-venv python3-pip --no-install-recommends && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
           - name: fedora-39
             image: fedora:39
             pkg_manager: dnf
-            install_cmd: dnf install -y python3 python3-pip --setopt=install_weak_deps=False
+            install_cmd: dnf install -y python3.11 python3.11-pip --setopt=install_weak_deps=False && alternatives --set python3 /usr/bin/python3.11
 
     steps:
       - name: Download build artifacts
