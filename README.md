@@ -185,7 +185,7 @@ The workflow will:
 ### Tested Distributions
 
 - ✅ Ubuntu 22.04 & 24.04
-- ✅ Debian 11 & 12
+- ✅ Debian 12
 - ✅ Fedora 39
 
 **Note**: Docker-based testing runs in container mode without systemd. For complete systemd integration testing, install on actual VMs or bare metal systems.
