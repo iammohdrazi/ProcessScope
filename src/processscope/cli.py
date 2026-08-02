@@ -270,6 +270,69 @@ def status(ctx: click.Context) -> None:
         sys.exit(1)
 
 
+# ── List Command ──────────────────────────────────────────────────────
+
+@main.command("list")
+@click.option("--tree", is_flag=True, default=False, help="Show output as a hierarchical tree.")
+@click.option("--limit", "-l", type=int, default=50, help="Maximum number of processes to display (default: 50, use 0 for all).")
+@click.pass_context
+def list_cmd(ctx: click.Context, tree: bool, limit: int) -> None:
+    """List running system processes."""
+    import httpx
+
+    from processscope.config import load_config
+    config = load_config(ctx.obj.get("config_path"))
+
+    api_url = f"http://{config.server.host}:{config.server.port}/api/v1/system/tree"
+
+    try:
+        resp = httpx.get(api_url, timeout=5.0)
+        data = resp.json()
+        process_tree = data.get("tree", [])
+
+        if not process_tree:
+            print("No processes found.")
+            return
+
+        print(f"{'PID':<8} {'PPID':<8} {'User':<12} {'State':<15} {'Name'}")
+        print("-" * 65)
+
+        count = [0]
+
+        def print_flat(nodes: list[dict]) -> None:
+            for node in nodes:
+                if limit > 0 and count[0] >= limit:
+                    return
+                print(f"{node.get('pid'):<8} {node.get('ppid'):<8} {node.get('username', '?')[:11]:<12} {node.get('status', '?')[:14]:<15} {node.get('name', '?')}")
+                count[0] += 1
+                if node.get('children'):
+                    print_flat(node['children'])
+
+        def print_tree(nodes: list[dict], level: int = 0) -> None:
+            for node in nodes:
+                if limit > 0 and count[0] >= limit:
+                    return
+                indent = "  " * level + ("└─ " if level > 0 else "")
+                name = node.get('name', '?')
+                print(f"{node.get('pid'):<8} {node.get('ppid'):<8} {node.get('username', '?')[:11]:<12} {node.get('status', '?')[:14]:<15} {indent}{name}")
+                count[0] += 1
+                if node.get('children'):
+                    print_tree(node['children'], level + 1)
+
+        if tree:
+            print_tree(process_tree)
+        else:
+            print_flat(process_tree)
+
+        if limit > 0 and count[0] >= limit:
+            print(f"\n... output truncated to {limit} processes (use --limit 0 to show all)")
+
+    except httpx.ConnectError:
+        print("✗ ProcessScope agent is not running.", file=sys.stderr)
+        print("  Start it with: sudo processscope start", file=sys.stderr)
+        sys.exit(1)
+
+
 # ── Version Command ───────────────────────────────────────────────────
 
 @main.command()

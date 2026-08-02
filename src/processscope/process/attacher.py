@@ -67,6 +67,27 @@ class HookedProcess:
 
     def to_dict(self) -> dict:
         """Serialize for API responses."""
+        cpu_percent = 0.0
+        memory_rss = 0
+        memory_human = "0 B"
+        
+        if self.is_alive() and self.psutil_process:
+            try:
+                cpu_percent = self.psutil_process.cpu_percent(interval=0)
+                memory_rss = self.psutil_process.memory_info().rss
+                
+                # Format memory
+                n = memory_rss
+                for unit in ("B", "KB", "MB", "GB"):
+                    if abs(n) < 1024.0:
+                        memory_human = f"{n:.1f} {unit}"
+                        break
+                    n /= 1024.0
+                else:
+                    memory_human = f"{n:.1f} TB"
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
         return {
             "pid": self.pid,
             "name": self.name,
@@ -78,6 +99,9 @@ class HookedProcess:
             "include_children": self.include_children,
             "child_pids": self.child_pids,
             "is_alive": self.is_alive(),
+            "cpu_percent": round(cpu_percent, 2),
+            "memory_rss": memory_rss,
+            "memory_human": memory_human,
         }
 
 
