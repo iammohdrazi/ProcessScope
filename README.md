@@ -4,7 +4,7 @@
 
 > Attach, inspect, and analyze any running Linux process in real time.
 
-[![Version](https://img.shields.io/badge/version-0.1.10-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.1.11-blue.svg)]()
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-orange.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)]()
