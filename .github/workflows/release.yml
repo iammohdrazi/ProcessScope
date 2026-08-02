@@ -251,6 +251,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: release-packages
+          path: .
 
       - name: Generate release notes
         run: |
@@ -274,7 +275,7 @@ jobs:
           ## Verification
           This release has been tested across multiple Linux distributions:
           - ✅ Ubuntu 22.04 & 24.04
-          - ✅ Debian 11 & 12
+          - ✅ Debian 12
           - ✅ Fedora 39
 
           All installation and uninstallation tests passed successfully in container mode.
