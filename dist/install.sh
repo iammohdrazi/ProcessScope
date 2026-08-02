@@ -10,7 +10,7 @@ set -e
 
 APP_NAME="processscope"
 VERSION="0.1.0"
-TOTAL_STEPS=9
+TOTAL_STEPS=10
 CURRENT_STEP=0
 
 # Must be run as root
@@ -49,7 +49,33 @@ else
     exit 1
 fi
 
-# 2. Create standard FHS directories
+# 2. Uninstall previous version if exists
+step "Removing previous installation (if any)..."
+
+# Ensure uninstall.sh exists so prerm doesn't fail
+if [ -d /opt/$APP_NAME ] && [ ! -f /opt/$APP_NAME/scripts/uninstall.sh ]; then
+    mkdir -p /opt/$APP_NAME/scripts
+    echo "#!/bin/bash" > /opt/$APP_NAME/scripts/uninstall.sh
+    echo "exit 0" >> /opt/$APP_NAME/scripts/uninstall.sh
+    chmod +x /opt/$APP_NAME/scripts/uninstall.sh
+fi
+
+if command -v dpkg >/dev/null 2>&1 && dpkg -l | grep -q "^ii  $APP_NAME "; then
+    apt-get remove -y $APP_NAME >/dev/null 2>&1 || dpkg --remove --force-all $APP_NAME >/dev/null 2>&1
+elif command -v rpm >/dev/null 2>&1 && rpm -q $APP_NAME >/dev/null 2>&1; then
+    if command -v dnf >/dev/null 2>&1; then
+        dnf remove -y $APP_NAME >/dev/null 2>&1 || true
+    elif command -v zypper >/dev/null 2>&1; then
+        zypper remove -y $APP_NAME >/dev/null 2>&1 || true
+    else
+        rpm -e $APP_NAME >/dev/null 2>&1 || true
+    fi
+elif [ -f /opt/$APP_NAME/scripts/uninstall.sh ]; then
+    /opt/$APP_NAME/scripts/uninstall.sh >/dev/null 2>&1 || true
+fi
+check_ok
+
+# 3. Create standard FHS directories
 step "Creating system directories..."
 mkdir -p /opt/$APP_NAME/bin
 mkdir -p /opt/$APP_NAME/lib
@@ -67,19 +93,19 @@ chmod 700 /var/lib/$APP_NAME/db
 chmod 700 /var/lib/$APP_NAME/sessions
 check_ok
 
-# 3. Copy files from package layout
+# 4. Copy files from package layout
 step "Copying application files..."
 cp -a opt/$APP_NAME/* /opt/$APP_NAME/
 cp -a etc/$APP_NAME/* /etc/$APP_NAME/
 check_ok
 
-# 4. Set up Python virtual environment
+# 5. Set up Python virtual environment
 step "Setting up Python virtual environment..."
 python3 -m venv /opt/$APP_NAME/venv
 /opt/$APP_NAME/venv/bin/pip install --upgrade pip setuptools wheel > /dev/null 2>&1
 check_ok
 
-# 5. Install the wheel package
+# 6. Install the wheel package
 step "Installing Python package..."
 WHEEL_FILE=$(ls /opt/$APP_NAME/lib/$APP_NAME-*.whl 2>/dev/null | head -n 1)
 if [ -z "$WHEEL_FILE" ]; then
@@ -90,7 +116,7 @@ fi
 ln -sf /opt/$APP_NAME/venv/bin/processscope /usr/local/bin/processscope
 check_ok
 
-# 6. Install systemd service
+# 7. Install systemd service
 step "Configuring systemd service..."
 if [ -d /usr/lib/systemd/system ]; then
     cp processscope.service /usr/lib/systemd/system/
@@ -101,14 +127,14 @@ systemctl daemon-reload
 systemctl enable processscope > /dev/null 2>&1
 check_ok
 
-# 7. Install logrotate
+# 8. Install logrotate
 step "Configuring logrotate..."
 if [ -d /etc/logrotate.d ]; then
     cp processscope /etc/logrotate.d/$APP_NAME
 fi
 check_ok
 
-# 8. Registering with Package Manager
+# 9. Registering with Package Manager
 step "Registering package manager uninstaller..."
 
 # Write uninstall script that the package manager will call
@@ -141,9 +167,11 @@ Architecture: all
 Maintainer: ProcessScope Team <team@processscope.dev>
 Description: Linux Process Observability Platform
 EOF
-    cat << 'EOF' > /tmp/processscope-prerm
+cat << 'EOF' > /tmp/processscope-prerm
 #!/bin/bash
-/opt/processscope/scripts/uninstall.sh
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    /opt/processscope/scripts/uninstall.sh || true
+fi
 EOF
     chmod +x /tmp/processscope-prerm
     
@@ -190,7 +218,7 @@ else
 fi
 check_ok
 
-# 9. Start the service
+# 10. Start the service
 step "Starting the daemon service..."
 systemctl start processscope
 check_ok
