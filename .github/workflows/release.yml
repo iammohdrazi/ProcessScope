@@ -129,33 +129,40 @@ jobs:
           - name: ubuntu-22.04
             image: ubuntu:22.04
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip --no-install-recommends
           - name: ubuntu-24.04
             image: ubuntu:24.04
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip --no-install-recommends
           - name: debian-11
             image: debian:11
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip --no-install-recommends
           - name: debian-12
             image: debian:12
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip --no-install-recommends
           - name: fedora-39
             image: fedora:39
             pkg_manager: dnf
-            install_cmd: dnf install -y python3 python3-devel
-          - name: centos-7
-            image: centos:7
-            pkg_manager: yum
-            install_cmd: yum install -y python3 python3-devel
+            install_cmd: dnf install -y python3 python3-pip --setopt=install_weak_deps=False
+          - name: rockylinux-8
+            image: rockylinux:8
+            pkg_manager: dnf
+            install_cmd: dnf install -y python3 python3-pip --setopt=install_weak_deps=False
 
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: release-packages
+
+      - name: List downloaded files
+        run: |
+          echo "Downloaded files:"
+          ls -la
+          echo "Looking for tar.gz files:"
+          find . -name "*.tar.gz" -type f
 
       - name: Set up Docker
         run: |
@@ -166,16 +173,37 @@ jobs:
 
       - name: Install dependencies in container
         run: |
-          docker exec test-container bash -c "${{ matrix.distro.install_cmd }}" || docker exec test-container sh -c "${{ matrix.distro.install_cmd }}"
+          # Retry installation with network issues handling
+          for i in 1 2 3; do
+            if docker exec test-container bash -c "${{ matrix.distro.install_cmd }}"; then
+              echo "Dependencies installed successfully"
+              break
+            else
+              echo "Attempt $i failed, retrying..."
+              sleep 5
+            fi
+          done
+          # If all retries failed, try minimal installation
+          docker exec test-container bash -c "${{ matrix.distro.install_cmd }}" || docker exec test-container sh -c "apt-get update && apt-get install -y python3 python3-pip || yum install -y python3 python3-pip || dnf install -y python3 python3-pip"
 
       - name: Copy package to container
         run: |
-          docker cp *.tar.gz test-container:/tmp/
-          docker cp test_install.sh test-container:/tmp/
+          # Find the actual tar.gz file and copy it
+          TAR_FILE=$(find . -name "*.tar.gz" -type f | head -n 1)
+          if [ -z "$TAR_FILE" ]; then
+            echo "Error: No tar.gz file found"
+            exit 1
+          fi
+          echo "Copying $TAR_FILE to container"
+          docker cp "$TAR_FILE" test-container:/tmp/processscope.tar.gz
+          # Also copy test script if it exists
+          if [ -f "test_install.sh" ]; then
+            docker cp test_install.sh test-container:/tmp/
+          fi
 
       - name: Extract package in container
         run: |
-          docker exec test-container bash -c "cd /tmp && tar -xzf *.tar.gz"
+          docker exec test-container bash -c "cd /tmp && tar -xzf processscope.tar.gz"
 
       - name: Run install script in container
         run: |
@@ -191,6 +219,8 @@ jobs:
             docker exec test-container bash -c "apt-get remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
           elif [ "${{ matrix.distro.pkg_manager }}" = "dnf" ]; then
             docker exec test-container bash -c "dnf remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
+          elif [ "${{ matrix.distro.pkg_manager }}" = "yum" ]; then
+            docker exec test-container bash -c "yum remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
           elif [ "${{ matrix.distro.pkg_manager }}" = "zypper" ]; then
             docker exec test-container bash -c "zypper remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
           else
@@ -249,7 +279,7 @@ jobs:
           - ✅ Ubuntu 22.04 & 24.04
           - ✅ Debian 11 & 12
           - ✅ Fedora 39
-          - ✅ CentOS 7
+          - ✅ Rocky Linux 8
 
           All installation and uninstallation tests passed successfully in container mode.
           For complete systemd integration testing, install on actual VMs or bare metal systems.
@@ -281,6 +311,6 @@ jobs:
           echo "- ✅ Ubuntu 22.04 & 24.04" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Debian 11 & 12" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Fedora 39" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ CentOS 7" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Rocky Linux 8" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Note: Tests run in container mode without systemd. For complete systemd testing, install on actual systems." >> $GITHUB_STEP_SUMMARY

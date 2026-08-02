@@ -17,7 +17,7 @@ A complete workflow that:
   - Ubuntu 22.04 & 24.04
   - Debian 11 & 12
   - Fedora 39
-  - CentOS 7
+  - Rocky Linux 8
 - **Installation Testing**: Runs comprehensive install/uninstall cycles on each distribution
 - **Release Creation**: Automatically creates GitHub releases with artifacts if all tests pass
 
@@ -213,6 +213,12 @@ Modify the retention period:
 - Systemd is not available in most Docker containers
 - Tests run in "container mode" with `SKIP_SYSTEMD=true`
 - This is expected behavior for Docker-based testing
+
+### CentOS 7 Repository Errors
+- CentOS 7 reached end-of-life and its repositories are no longer available
+- Replaced with Rocky Linux 8 (a CentOS 8 compatible alternative)
+- Rocky Linux is actively maintained and has working repositories
+- If you need CentOS 7 testing, use vault.centos.org with custom repo configuration
 
 ### Release Not Created
 - Ensure "create_release" checkbox is enabled
