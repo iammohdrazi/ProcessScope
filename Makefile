@@ -8,7 +8,7 @@ SHELL := /bin/bash
 # Project metadata
 APP_NAME       := processscope
 APP_DISPLAY    := ProcessScope
-VERSION        := 0.1.0
+VERSION        := $(or ${VERSION},0.1.0)
 ARCH           := $(shell uname -m)
 OS             := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 

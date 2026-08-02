@@ -10,6 +10,10 @@ set -e
 
 echo "━━━ ProcessScope Build Script ━━━"
 
+# Use VERSION from environment if set, otherwise use default
+VERSION="${VERSION:-0.1.0}"
+export VERSION
+
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1

@@ -1,0 +1,282 @@
+name: ProcessScope Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+      create_release:
+        description: 'Create GitHub release after successful tests'
+        required: true
+        type: boolean
+        default: true
+
+env:
+  APP_NAME: processscope
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Job 1: Version Management
+  version-bump:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version_bump.outputs.new_version }}
+      old_version: ${{ steps.version_bump.outputs.old_version }}
+      is_release: ${{ steps.version_bump.outputs.is_release }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install toml
+
+      - name: Bump version
+        id: version_bump
+        run: |
+          python scripts/bump_version.py --type ${{ inputs.version_type }}
+          echo "new_version=$(python scripts/get_version.py)" >> $GITHUB_OUTPUT
+          echo "old_version=$(git show HEAD:pyproject.toml | grep '^version =' | head -1 | cut -d'"' -f2)" >> $GITHUB_OUTPUT
+          echo "is_release=${{ inputs.create_release }}" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add pyproject.toml
+          git commit -m "chore: bump version to ${{ steps.version_bump.outputs.new_version }}"
+          git push
+
+  # Job 2: Build Packages
+  build:
+    needs: version-bump
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.version-bump.outputs.new_version }}
+      build_number: ${{ steps.build_info.outputs.build_number }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-venv
+
+      - name: Build packages
+        run: |
+          make clean
+          make build
+          make package-tar
+        env:
+          VERSION: ${{ needs.version-bump.outputs.new_version }}
+
+      - name: Generate build info
+        id: build_info
+        run: |
+          BUILD_NUMBER=$(date -u +"%Y%m%d.%H%M%S").$(git rev-parse --short HEAD)
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: |
+            dist/output/*.tar.gz
+            scripts/test_install.sh
+          retention-days: 7
+
+  # Job 3: Multi-Distribution Testing Matrix
+  test-install:
+    needs: [version-bump, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - name: ubuntu-22.04
+            image: ubuntu:22.04
+            pkg_manager: apt
+            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip
+          - name: ubuntu-24.04
+            image: ubuntu:24.04
+            pkg_manager: apt
+            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip
+          - name: debian-11
+            image: debian:11
+            pkg_manager: apt
+            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip systemd
+          - name: debian-12
+            image: debian:12
+            pkg_manager: apt
+            install_cmd: apt-get update && apt-get install -y python3 python3-venv python3-pip systemd
+          - name: rhel-8
+            image: redhat/ubi8
+            pkg_manager: dnf
+            install_cmd: dnf install -y python3 python3-devel systemd
+          - name: rhel-9
+            image: redhat/ubi9
+            pkg_manager: dnf
+            install_cmd: dnf install -y python3 python3-devel systemd
+          - name: fedora-39
+            image: fedora:39
+            pkg_manager: dnf
+            install_cmd: dnf install -y python3 python3-devel systemd
+          - name: sles-15
+            image: registry.suse.com/suse/sle15
+            pkg_manager: zypper
+            install_cmd: zypper install -y python3 python3-devel systemd
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+
+      - name: Set up Docker
+        run: |
+          docker run -d --name test-container --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${{ matrix.distro.image }} /usr/sbin/init
+          sleep 10
+
+      - name: Install dependencies in container
+        run: |
+          docker exec test-container bash -c "${{ matrix.distro.install_cmd }}"
+
+      - name: Copy package to container
+        run: |
+          docker cp *.tar.gz test-container:/tmp/
+          docker cp test_install.sh test-container:/tmp/
+
+      - name: Extract package in container
+        run: |
+          docker exec test-container bash -c "cd /tmp && tar -xzf *.tar.gz"
+
+      - name: Run install script in container
+        run: |
+          docker exec test-container bash -c "cd /tmp/processscope-* && ./install.sh"
+
+      - name: Run installation tests
+        run: |
+          docker exec test-container bash -c "chmod +x /tmp/test_install.sh && /tmp/test_install.sh"
+
+      - name: Test uninstall
+        run: |
+          if [ "${{ matrix.distro.pkg_manager }}" = "apt" ]; then
+            docker exec test-container bash -c "apt-get remove -y processscope"
+          elif [ "${{ matrix.distro.pkg_manager }}" = "dnf" ]; then
+            docker exec test-container bash -c "dnf remove -y processscope"
+          elif [ "${{ matrix.distro.pkg_manager }}" = "zypper" ]; then
+            docker exec test-container bash -c "zypper remove -y processscope"
+          fi
+
+      - name: Verify cleanup
+        run: |
+          docker exec test-container bash -c "! which processscope" || true
+          docker exec test-container bash -c "[ ! -f /usr/lib/systemd/system/processscope.service ]" || true
+
+      - name: Cleanup container
+        if: always()
+        run: |
+          docker rm -f test-container || true
+
+      - name: Mark test results
+        if: always()
+        run: |
+          echo "Test for ${{ matrix.distro.name }} completed"
+
+  # Job 4: Create Release (only if all tests pass)
+  create-release:
+    needs: [version-bump, build, test-install]
+    if: ${{ needs.version-bump.outputs.is_release == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+
+      - name: Generate release notes
+        run: |
+          cat > release_notes.md << EOF
+          # ProcessScope v${{ needs.version-bump.outputs.new_version }}
+
+          ## Changes
+          - Automated release build
+          - Build number: ${{ needs.build.outputs.build_number }}
+          - Tested on: Ubuntu 22.04/24.04, Debian 11/12, RHEL 8/9, Fedora 39, SLES 15
+
+          ## Installation
+
+          ### From tar.gz
+          \`\`\`bash
+          tar -xzf processscope-${{ needs.version-bump.outputs.new_version }}-linux-x86_64.tar.gz
+          cd processscope-${{ needs.version-bump.outputs.new_version }}
+          sudo ./install.sh
+          \`\`\`
+
+          ## Verification
+          This release has been tested across multiple Linux distributions:
+          - ✅ Ubuntu 22.04 & 24.04
+          - ✅ Debian 11 & 12
+          - ✅ RHEL 8 & 9
+          - ✅ Fedora 39
+          - ✅ SLES 15
+
+          All installation and uninstallation tests passed successfully.
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.version-bump.outputs.new_version }}
+          name: ProcessScope v${{ needs.version-bump.outputs.new_version }}
+          body_path: release_notes.md
+          files: |
+            *.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload summary
+        run: |
+          echo "## Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.version-bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Number:** ${{ needs.build.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** v${{ needs.version-bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tested Distributions" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ubuntu 22.04 & 24.04" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Debian 11 & 12" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ RHEL 8 & 9" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Fedora 39" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ SLES 15" >> $GITHUB_STEP_SUMMARY

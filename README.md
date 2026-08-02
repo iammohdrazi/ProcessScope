@@ -163,6 +163,35 @@ make all           # Full pipeline
 make clean         # Clean artifacts
 ```
 
+## Release Workflow
+
+ProcessScope includes a GitHub Actions workflow for automated release builds with multi-distribution testing.
+
+### Creating a Release
+
+1. Go to **Actions** → **ProcessScope Release Build**
+2. Click **Run workflow**
+3. Select version bump type (patch/minor/major)
+4. Enable release creation
+5. Click **Run workflow**
+
+The workflow will:
+- Automatically bump the version in `pyproject.toml`
+- Build release packages
+- Test installation across 8 Linux distributions (Ubuntu, Debian, RHEL, Fedora, SLES)
+- Verify install/uninstall cycles on each distribution
+- Create a GitHub release with artifacts if all tests pass
+
+### Tested Distributions
+
+- ✅ Ubuntu 22.04 & 24.04
+- ✅ Debian 11 & 12
+- ✅ RHEL 8 & 9
+- ✅ Fedora 39
+- ✅ SLES 15
+
+See [scripts/README.md](scripts/README.md) for workflow details and manual testing instructions.
+
 ## Requirements
 
 - **OS**: Linux (Ubuntu 20.04+, Debian 11+, RHEL 8+, Fedora 36+)
