@@ -186,9 +186,10 @@ The workflow will:
 
 - ✅ Ubuntu 22.04 & 24.04
 - ✅ Debian 11 & 12
-- ✅ RHEL 8 & 9
 - ✅ Fedora 39
-- ✅ SLES 15
+- ✅ CentOS 7
+
+**Note**: Docker-based testing runs in container mode without systemd. For complete systemd integration testing, install on actual VMs or bare metal systems.
 
 See [scripts/README.md](scripts/README.md) for workflow details and manual testing instructions.
 

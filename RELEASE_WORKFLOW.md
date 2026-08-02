@@ -13,12 +13,11 @@ A complete workflow that:
 - **Manual Trigger**: Can be run manually with a click from the GitHub Actions tab
 - **Version Management**: Automatically bumps version (patch/minor/major) with each run
 - **Build Process**: Creates release packages using your existing Makefile system
-- **Multi-Distribution Testing**: Tests installation across 8 Linux distributions:
+- **Multi-Distribution Testing**: Tests installation across Linux distributions:
   - Ubuntu 22.04 & 24.04
   - Debian 11 & 12
-  - RHEL 8 & 9
   - Fedora 39
-  - SLES 15
+  - CentOS 7
 - **Installation Testing**: Runs comprehensive install/uninstall cycles on each distribution
 - **Release Creation**: Automatically creates GitHub releases with artifacts if all tests pass
 
@@ -69,21 +68,23 @@ A complete workflow that:
 
 1. **Version Bump**: Automatically increments version in all relevant files
 2. **Build**: Creates release packages using `make build` and `make package-tar`
-3. **Multi-Distribution Testing**: Tests installation across 8 Linux distributions
+3. **Multi-Distribution Testing**: Tests installation across Linux distributions
 4. **Release Creation**: Creates GitHub release with artifacts if all tests pass
 
 ### Testing Strategy
 
 For each Linux distribution, the workflow:
 
-1. Spins up a Docker container with the target OS
-2. Installs required dependencies (Python, systemd, etc.)
+1. Spins up a Docker container with the target OS (in container mode without systemd)
+2. Installs required dependencies (Python, pip, etc.)
 3. Copies the release package into the container
-4. Extracts and runs the installation script
-5. Verifies installation using `test_install.sh`
-6. Tests basic functionality
-7. Uninstalls using the appropriate package manager
+4. Extracts and runs the installation script with `SKIP_SYSTEMD=true`
+5. Verifies installation using `test_install.sh` (container mode)
+6. Tests basic CLI functionality
+7. Uninstalls using manual cleanup or package manager
 8. Verifies cleanup
+
+**Note**: Systemd service testing is skipped in container mode since Docker containers don't support full systemd. For complete systemd testing, run the installation on actual VMs or bare metal systems.
 
 ### Version Management
 
@@ -152,6 +153,8 @@ matrix:
       install_cmd: pacman -Sy --noconfirm python python-pip
 ```
 
+**Note**: Most Docker containers don't support full systemd, so tests run in container mode with `SKIP_SYSTEMD=true`.
+
 ### Adjusting Test Timeout
 
 Modify the container startup timeout:
@@ -198,11 +201,18 @@ Modify the retention period:
 - Check Docker container logs in workflow output
 - Verify systemd is available in the container image
 - Review test_install.sh output for specific failures
+- Most containers run in "container mode" without systemd - this is expected
 
 ### getcwd() Failed Error During Uninstall
 - This was fixed by changing to a safe directory in the uninstall script
 - The uninstall script now changes to /tmp before executing removal commands
 - If you still see this error, check that the uninstall script in /opt/processscope/scripts/uninstall.sh has the cd command at the beginning
+
+### Docker Init Command Errors
+- Some containers don't have `/usr/sbin/init` - we use `sleep infinity` instead
+- Systemd is not available in most Docker containers
+- Tests run in "container mode" with `SKIP_SYSTEMD=true`
+- This is expected behavior for Docker-based testing
 
 ### Release Not Created
 - Ensure "create_release" checkbox is enabled

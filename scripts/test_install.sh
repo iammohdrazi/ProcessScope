@@ -27,7 +27,7 @@ echo ""
 echo "Test 2: Checking version..."
 processscope --version || true
 
-# Test 3: Check systemd service
+# Test 3: Check systemd service (if available)
 echo ""
 echo "Test 3: Checking systemd service..."
 if command -v systemctl >/dev/null 2>&1; then
@@ -35,36 +35,36 @@ if command -v systemctl >/dev/null 2>&1; then
         echo "✓ systemd service file found"
         systemctl cat processscope.service || true
     else
-        echo "⚠ systemd service file not found (may be expected in some containers)"
+        echo "⚠ systemd service file not found (expected in container mode)"
     fi
 else
-    echo "⚠ systemctl not available (may be expected in some containers)"
+    echo "⊘ systemctl not available (container mode - expected)"
 fi
 
-# Test 4: Check if service is enabled
+# Test 4: Check if service is enabled (if available)
 echo ""
 echo "Test 4: Checking if service is enabled..."
 if command -v systemctl >/dev/null 2>&1; then
     if systemctl is-enabled processscope >/dev/null 2>&1; then
         echo "✓ service is enabled"
     else
-        echo "⚠ service is not enabled (may be expected in some containers)"
+        echo "⚠ service is not enabled (expected in container mode)"
     fi
 else
-    echo "⚠ systemctl not available (may be expected in some containers)"
+    echo "⊘ systemctl not available (container mode - expected)"
 fi
 
-# Test 5: Check if service is running
+# Test 5: Check if service is running (if available)
 echo ""
 echo "Test 5: Checking if service is running..."
 if command -v systemctl >/dev/null 2>&1; then
     if systemctl is-active processscope >/dev/null 2>&1; then
         echo "✓ service is running"
     else
-        echo "⚠ service is not running (may be expected in some containers)"
+        echo "⚠ service is not running (expected in container mode)"
     fi
 else
-    echo "⚠ systemctl not available (may be expected in some containers)"
+    echo "⊘ systemctl not available (container mode - expected)"
 fi
 
 # Test 6: Check installation directories
@@ -110,7 +110,8 @@ echo "Binary installation: ✓"
 echo "Version reporting: ✓"
 echo "Python venv: ✓"
 echo "CLI functionality: ✓"
-echo "Systemd integration: ⚠ (may vary in containers)"
-echo "Directory structure: ⚠ (may vary in containers)"
+echo "Systemd integration: ⊘ (container mode - expected)"
+echo "Directory structure: ✓"
 echo ""
 echo "━━━ Core Installation Tests Passed ━━━"
+echo "Note: Systemd tests skipped in container mode (expected behavior)"

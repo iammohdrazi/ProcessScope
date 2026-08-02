@@ -33,6 +33,9 @@ check_ok() {
 echo "ProcessScope v$VERSION — Installing"
 echo ""
 
+# Allow skipping systemd operations for container testing
+SKIP_SYSTEMD="${SKIP_SYSTEMD:-false}"
+
 # 1. Check system requirements
 step "Checking system requirements..."
 if ! command -v python3 >/dev/null 2>&1; then
@@ -118,14 +121,19 @@ check_ok
 
 # 7. Install systemd service
 step "Configuring systemd service..."
-if [ -d /usr/lib/systemd/system ]; then
-    cp processscope.service /usr/lib/systemd/system/
-elif [ -d /etc/systemd/system ]; then
-    cp processscope.service /etc/systemd/system/
+if [ "$SKIP_SYSTEMD" = "true" ]; then
+    echo "        Skipping systemd (container mode)"
+    check_ok
+else
+    if [ -d /usr/lib/systemd/system ]; then
+        cp processscope.service /usr/lib/systemd/system/
+    elif [ -d /etc/systemd/system ]; then
+        cp processscope.service /etc/systemd/system/
+    fi
+    systemctl daemon-reload
+    systemctl enable processscope > /dev/null 2>&1
+    check_ok
 fi
-systemctl daemon-reload
-systemctl enable processscope > /dev/null 2>&1
-check_ok
 
 # 8. Install logrotate
 step "Configuring logrotate..."
@@ -223,8 +231,13 @@ check_ok
 
 # 10. Start the service
 step "Starting the daemon service..."
-systemctl start processscope
-check_ok
+if [ "$SKIP_SYSTEMD" = "true" ]; then
+    echo "        Skipping service start (container mode)"
+    check_ok
+else
+    systemctl start processscope
+    check_ok
+fi
 
 
 # --- Finish & Display Info ---
