@@ -104,8 +104,31 @@ check_ok
 
 # 5. Set up Python virtual environment
 step "Setting up Python virtual environment..."
+
+# Check if python3-venv is available, try to install if not
+if ! python3 -m venv --help > /dev/null 2>&1; then
+    echo "        python3-venv not available, attempting to install..."
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get update > /dev/null 2>&1
+        PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "3")
+        apt-get install -y python3-venv python${PY_VER}-venv > /dev/null 2>&1 || apt-get install -y python3-venv > /dev/null 2>&1
+    elif command -v dnf >/dev/null 2>&1; then
+        dnf install -y python3-virtualenv > /dev/null 2>&1
+    elif command -v yum >/dev/null 2>&1; then
+        yum install -y python3-virtualenv > /dev/null 2>&1
+    fi
+fi
+
 python3 -m venv /opt/$APP_NAME/venv
-/opt/$APP_NAME/venv/bin/pip install --upgrade pip setuptools wheel > /dev/null 2>&1
+# Try to install pip using ensurepip, fall back to manual installation
+if /opt/$APP_NAME/venv/bin/python3 -m ensurepip --upgrade --default-pip > /dev/null 2>&1; then
+    /opt/$APP_NAME/venv/bin/pip install --upgrade pip setuptools wheel > /dev/null 2>&1
+else
+    # ensurepip failed, try to install pip manually
+    curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null || wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py 2>/dev/null
+    /opt/$APP_NAME/venv/bin/python3 /tmp/get-pip.py > /dev/null 2>&1
+    /opt/$APP_NAME/venv/bin/pip install --upgrade pip setuptools wheel > /dev/null 2>&1
+fi
 check_ok
 
 # 6. Install the wheel package

@@ -17,7 +17,6 @@ A complete workflow that:
   - Ubuntu 22.04 & 24.04
   - Debian 11 & 12
   - Fedora 39
-  - Rocky Linux 8
 - **Installation Testing**: Runs comprehensive install/uninstall cycles on each distribution
 - **Release Creation**: Automatically creates GitHub releases with artifacts if all tests pass
 
