@@ -9,7 +9,7 @@
 set -e
 
 APP_NAME="processscope"
-VERSION="0.1.8"
+VERSION="0.1.9"
 TOTAL_STEPS=10
 CURRENT_STEP=0
 
