@@ -47,6 +47,8 @@ Comprehensive installation test script that verifies:
 - Python virtual environment
 - Basic CLI functionality
 
+**Note**: The uninstall script in `dist/install.sh` has been updated to avoid `getcwd() failed` errors by changing to a safe directory (/tmp) before executing removal commands.
+
 **Usage:**
 ```bash
 # Run inside a container after installation

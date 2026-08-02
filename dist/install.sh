@@ -141,6 +141,9 @@ step "Registering package manager uninstaller..."
 mkdir -p /opt/$APP_NAME/scripts
 cat << 'EOF' > /opt/$APP_NAME/scripts/uninstall.sh
 #!/bin/bash
+# Change to a safe directory to avoid getcwd() errors
+cd /tmp || cd /root || true
+
 systemctl stop processscope || true
 systemctl disable processscope || true
 rm -f /usr/lib/systemd/system/processscope.service

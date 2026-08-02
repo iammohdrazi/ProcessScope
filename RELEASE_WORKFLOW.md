@@ -181,6 +181,13 @@ Modify the retention period:
 ### Workflow Fails at Version Bump
 - Check that `pyproject.toml` has a valid version string
 - Ensure scripts directory exists and is accessible
+- Verify GitHub Actions has write permissions for the repository
+- Check that the `GITHUB_TOKEN` has necessary permissions
+
+### Git Push Fails with 403 Error
+- Ensure the workflow has `permissions: contents: write` set
+- Verify repository settings allow GitHub Actions to push commits
+- Check that the branch is not protected without allowing workflow updates
 
 ### Build Fails
 - Verify all build dependencies are installed
@@ -191,6 +198,11 @@ Modify the retention period:
 - Check Docker container logs in workflow output
 - Verify systemd is available in the container image
 - Review test_install.sh output for specific failures
+
+### getcwd() Failed Error During Uninstall
+- This was fixed by changing to a safe directory in the uninstall script
+- The uninstall script now changes to /tmp before executing removal commands
+- If you still see this error, check that the uninstall script in /opt/processscope/scripts/uninstall.sh has the cd command at the beginning
 
 ### Release Not Created
 - Ensure "create_release" checkbox is enabled
@@ -241,7 +253,8 @@ apt-get update && apt-get install -y python3 python3-venv python3-pip systemd
 - `README.md` - Added release workflow section
 - `Makefile` - Added VERSION environment variable support
 - `build.sh` - Added VERSION environment variable support
-- `dist/install.sh` - Added VERSION environment variable support
+- `dist/install.sh` - Added VERSION environment variable support and fixed getcwd() error in uninstall script
+- `.github/workflows/release.yml` - Added proper permissions and git push authentication
 
 ## Security Considerations
 
@@ -261,3 +274,20 @@ For issues or questions:
 ---
 
 **This workflow provides a complete, automated release pipeline with comprehensive testing across multiple Linux distributions, ensuring your releases are reliable and thoroughly tested.**
+
+## Recent Fixes
+
+### Fixed getcwd() Error During Uninstall
+- **Issue**: `sh: 0: getcwd() failed: No such file or directory` error during package removal
+- **Cause**: The uninstall script was trying to access the current working directory which gets deleted during uninstall
+- **Fix**: Modified the uninstall script in `dist/install.sh` to change to a safe directory (`/tmp`) before executing removal commands
+- **Impact**: Uninstallations now complete cleanly without directory access errors
+
+### Fixed GitHub Actions 403 Error
+- **Issue**: `remote: Write access to repository not granted. fatal: unable to access 'https://github.com/...': The requested URL returned error: 403`
+- **Cause**: The workflow lacked proper permissions to push commits to the repository
+- **Fix**: 
+  - Added `permissions: contents: write` at the workflow level
+  - Updated git push command to use authenticated URL with `GITHUB_TOKEN`
+  - Added proper token checkout in the checkout step
+- **Impact**: The workflow can now successfully push version bump commits to the repository
