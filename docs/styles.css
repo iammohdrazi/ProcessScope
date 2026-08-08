@@ -438,18 +438,30 @@ body {
 }
 
 /* Releases Table */
+.releases-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    background: #ffffff;
+}
+
 .releases-table {
     width: 100%;
     border-collapse: collapse;
     background: #ffffff;
-    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    border: 1px solid var(--border);
 }
 
 .releases-table thead {
     background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.releases-table th {
     border-bottom: 2px solid var(--border);
 }
 

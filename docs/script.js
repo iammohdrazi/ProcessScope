@@ -130,9 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function renderReleases(releases) {
-            const latest = releases.slice(0, 5);
-            
             let tableHTML = `
+                <div class="releases-table-container">
                 <table class="releases-table">
                     <thead>
                         <tr>
@@ -144,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <tbody>
             `;
             
-            latest.forEach(release => {
+            releases.forEach(release => {
                 const dateStr = release.published_at ? new Date(release.published_at).toLocaleDateString() : 'N/A';
                 
                 let assetsHtml = '';
@@ -162,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <td>
                             <div class="release-title-group">
                                 <span class="release-icon">📦</span>
-                                <a href="${release.html_url}" target="_blank" class="release-version-link">ProcessScope ${release.name || release.tag_name}</a>
+                                <a href="${release.html_url}" target="_blank" class="release-version-link">${release.name || release.tag_name}</a>
                             </div>
                         </td>
                         <td>${dateStr !== 'N/A' ? dateStr : 'GitHub'}</td>
@@ -176,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
             tableHTML += `
                     </tbody>
                 </table>
+                </div>
             `;
             
             releasesContainer.innerHTML = tableHTML;
