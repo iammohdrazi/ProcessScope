@@ -64,8 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyBtn = document.getElementById('copy-btn');
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
-            const codeBlock = document.querySelector('.code-container code').innerText;
-            navigator.clipboard.writeText(codeBlock).then(() => {
+            const cloneLink = 'https://github.com/iammohdrazi/ProcessScope.git';
+            navigator.clipboard.writeText(cloneLink).then(() => {
                 const originalText = copyBtn.innerText;
                 copyBtn.innerText = 'Copied!';
                 copyBtn.style.background = 'var(--primary)';

@@ -91,9 +91,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6rem 5%;
-    min-height: 70vh;
-    gap: 4rem;
+    padding: 4rem 5%;
+    min-height: 50vh;
+    gap: 3rem;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 1px solid var(--border);
 }
@@ -220,22 +220,22 @@ body {
 
 /* Features */
 .features-section {
-    padding: 5rem 5%;
+    padding: 4rem 5%;
     background-color: var(--bg-light);
 }
 
 .features-section h2 {
     text-align: center;
     font-size: 2.5rem;
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
     color: #212529;
 }
 
 .features-subtitle {
     text-align: center;
     color: var(--text-muted);
-    margin-top: -3rem;
-    margin-bottom: 3rem;
+    margin-top: -1.5rem;
+    margin-bottom: 2.5rem;
 }
 
 .features-grid {
@@ -333,7 +333,7 @@ body {
 
 /* Quick Start */
 .quickstart-section {
-    padding: 6rem 5%;
+    padding: 4rem 5%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -344,7 +344,7 @@ body {
 
 .quickstart-section h2 {
     font-size: 2.5rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
     color: #212529;
 }
 
@@ -402,14 +402,14 @@ body {
 
 /* Releases */
 .releases-section {
-    padding: 5rem 5%;
+    padding: 4rem 5%;
     background-color: var(--bg-light);
 }
 
 .releases-section h2 {
     text-align: center;
     font-size: 2.5rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
     color: #212529;
 }
 
@@ -503,7 +503,7 @@ body {
 
 /* Support Section */
 .support-section {
-    padding: 5rem 5%;
+    padding: 4rem 5%;
     background-color: #f8f9fa;
     border-top: 1px solid var(--border);
 }
@@ -511,7 +511,7 @@ body {
 .support-section h2 {
     text-align: center;
     font-size: 2.5rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
     color: #212529;
 }
 
