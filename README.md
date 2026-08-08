@@ -6,7 +6,7 @@
 > 
 > 🌐 **Website & Downloads:** [iammohdrazi.github.io/ProcessScope](https://iammohdrazi.github.io/ProcessScope/)
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)]()
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-orange.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)]()
