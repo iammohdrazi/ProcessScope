@@ -53,6 +53,28 @@ body {
     gap: 10px;
 }
 
+.logo-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.logo-icon-footer {
+    width: 24px;
+    height: 24px;
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+}
+
 .nav-links a {
     color: var(--text-main);
     text-decoration: none;
@@ -63,18 +85,6 @@ body {
 
 .nav-links a:hover {
     color: var(--primary);
-}
-
-.github-btn {
-    border: 1px solid var(--border);
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    background: var(--bg-light);
-    color: var(--text-main);
-}
-
-.github-btn:hover {
-    background: var(--bg-secondary);
 }
 
 /* Hero Section */
@@ -126,6 +136,9 @@ body {
     transition: all 0.2s ease;
     cursor: pointer;
     border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-primary {
@@ -151,7 +164,7 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-/* Terminal Visual (Light Theme) */
+/* Terminal Visual */
 .hero-visual {
     flex: 1;
     perspective: 1000px;
@@ -332,18 +345,141 @@ body {
     border-color: var(--primary);
 }
 
+/* Releases */
+.releases-section {
+    padding: 5rem 5%;
+    background-color: var(--bg-light);
+}
+
+.releases-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
+    color: #212529;
+}
+
+.releases-container {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.release-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.release-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.release-version {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.release-date {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.release-body {
+    font-size: 0.95rem;
+    color: #374151;
+    margin-bottom: 1rem;
+    white-space: pre-wrap;
+}
+
+.release-assets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.asset-link {
+    display: inline-block;
+    background: #f3f4f6;
+    color: var(--primary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;
+    transition: all 0.2s;
+}
+
+.asset-link:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Support Section */
+.support-section {
+    padding: 5rem 5%;
+    background-color: #f8f9fa;
+    border-top: 1px solid var(--border);
+}
+
+.support-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
+    color: #212529;
+}
+
+.support-links {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.support-card {
+    flex: 1;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.support-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    border-color: var(--primary);
+}
+
+.support-card h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.support-card p {
+    color: var(--text-muted);
+}
+
 /* Footer */
 .footer {
     padding: 2rem 5%;
     background: #ffffff;
     text-align: center;
-}
-
-.footer-logo {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: var(--primary);
+    border-top: 1px solid var(--border);
 }
 
 .footer p {
@@ -371,13 +507,14 @@ body {
         transform: none;
         margin-top: 2rem;
     }
+    
+    .support-links {
+        flex-direction: column;
+    }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .nav-links {
-        display: none;
-    }
-    .hero h1 {
-        font-size: 2rem;
+        display: none; /* simple mobile behavior */
     }
 }
