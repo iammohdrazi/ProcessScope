@@ -130,42 +130,55 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function renderReleases(releases) {
-            releasesContainer.innerHTML = '';
-            // Show top 5
             const latest = releases.slice(0, 5);
             
+            let tableHTML = `
+                <table class="releases-table">
+                    <thead>
+                        <tr>
+                            <th>Version</th>
+                            <th>Release Date</th>
+                            <th>Downloads</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
             latest.forEach(release => {
-                const card = document.createElement('div');
-                card.className = 'release-card list-view';
-                
                 const dateStr = release.published_at ? new Date(release.published_at).toLocaleDateString() : 'N/A';
                 
                 let assetsHtml = '';
                 if (release.assets && release.assets.length > 0) {
-                    assetsHtml = `<div class="release-assets">
-                        ${release.assets.map(asset => `<a href="${asset.browser_download_url}" class="asset-link primary">⬇ Download ${asset.name}</a>`).join('')}
-                    </div>`;
+                    assetsHtml = release.assets.map(asset => `<a href="${asset.browser_download_url}" class="asset-link primary">⬇ ${asset.name}</a>`).join(' ');
                 } else {
-                    assetsHtml = `<div class="release-assets">
-                        <a href="${release.html_url}" target="_blank" class="asset-link">View on GitHub</a>
-                        <a href="${release.zipball_url}" class="asset-link primary">⬇ Source Code (zip)</a>
-                    </div>`;
+                    assetsHtml = `
+                        <a href="${release.html_url}" target="_blank" class="asset-link">View</a>
+                        <a href="${release.zipball_url}" class="asset-link primary">⬇ Source (zip)</a>
+                    `;
                 }
                 
-                card.innerHTML = `
-                    <div class="release-header-compact">
-                        <div class="release-title-group">
-                            <div class="release-icon">📦</div>
-                            <div class="release-version"><a href="${release.html_url}" target="_blank" style="color: inherit; text-decoration: none;">ProcessScope ${release.name || release.tag_name}</a></div>
-                        </div>
-                        <div class="release-date">Released on ${dateStr !== 'N/A' ? dateStr : 'GitHub'}</div>
-                    </div>
-                    <div class="release-actions-compact">
-                        ${assetsHtml}
-                    </div>
+                tableHTML += `
+                    <tr>
+                        <td>
+                            <div class="release-title-group">
+                                <span class="release-icon">📦</span>
+                                <a href="${release.html_url}" target="_blank" class="release-version-link">ProcessScope ${release.name || release.tag_name}</a>
+                            </div>
+                        </td>
+                        <td>${dateStr !== 'N/A' ? dateStr : 'GitHub'}</td>
+                        <td>
+                            <div class="release-actions-compact">${assetsHtml}</div>
+                        </td>
+                    </tr>
                 `;
-                releasesContainer.appendChild(card);
             });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            releasesContainer.innerHTML = tableHTML;
         }
     }
 });
