@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ProcessScope - A professional Linux-native process observability platform to inspect, debug, and monitor processes in real-time.">
+    <title>ProcessScope | Linux Process Observability Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">ProcessScope</div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#quick-start">Quick Start</a>
+            <a href="https://github.com/processscope/processscope" target="_blank" class="github-btn">GitHub</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <h1>Deep Visibility into <span class="highlight">Linux Processes</span></h1>
+            <p>Attach, inspect, and analyze any running Linux process in real-time with our unified telemetry engine.</p>
+            <div class="cta-group">
+                <a href="#quick-start" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/processscope/processscope" target="_blank" class="btn btn-secondary">View Source</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="terminal-body" id="terminal-text">
+                    <!-- Typed text will appear here -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features-section">
+        <h2>Powerful Observability Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3>Process Hooking</h3>
+                <p>Attach instantly to any process by PID or name without restarting it.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>CPU Telemetry</h3>
+                <p>Monitor per-core usage, context switches, and scheduling in real-time.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧠</div>
+                <h3>Memory Monitoring</h3>
+                <p>Track heap, stack, RSS, VMA, page faults, and detect memory leaks.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌐</div>
+                <h3>Network Tracker</h3>
+                <p>Observe TCP/UDP connections, bandwidth, and latency at a glance.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📁</div>
+                <h3>File System Activity</h3>
+                <p>Trace open files, file descriptors, reads, and writes transparently.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Unified Dashboard</h3>
+                <p>Correlate all telemetry via a live web dashboard and timeline.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="quick-start" class="quickstart-section">
+        <h2>Quick Start</h2>
+        <div class="code-container">
+            <div class="code-header">Install & Run</div>
+            <pre><code># Clone the repository
+git clone https://github.com/processscope/processscope.git
+cd processscope
+
+# Install in development mode
+make install
+
+# Start the observability server
+sudo .venv/bin/processscope start
+
+# Dashboard available at http://localhost:9876</code></pre>
+            <button class="copy-btn" id="copy-btn">Copy</button>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">ProcessScope</div>
+            <p>Licensed under Apache License 2.0.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
