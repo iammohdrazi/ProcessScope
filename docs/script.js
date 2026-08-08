@@ -82,56 +82,88 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Fetch GitHub Releases
+    // Fetch GitHub Releases/Tags
     const releasesContainer = document.getElementById('releases-container');
     if (releasesContainer) {
+        // Try fetching releases first
         fetch('https://api.github.com/repos/iammohdrazi/ProcessScope/releases')
             .then(response => response.json())
             .then(data => {
-                releasesContainer.innerHTML = ''; // clear loading text
-                if (!Array.isArray(data) || data.length === 0) {
-                    releasesContainer.innerHTML = '<div class="release-card"><p>No official releases found yet. Check back soon!</p></div>';
-                    return;
+                if (Array.isArray(data) && data.length > 0) {
+                    renderReleases(data);
+                } else {
+                    // Fallback to fetching tags if no releases exist
+                    fetchTagsAsReleases();
                 }
-
-                // Show top 5 releases
-                const latestReleases = data.slice(0, 5);
-                
-                latestReleases.forEach(release => {
-                    const card = document.createElement('div');
-                    card.className = 'release-card';
-                    
-                    const date = new Date(release.published_at).toLocaleDateString();
-                    
-                    let assetsHtml = '';
-                    if (release.assets && release.assets.length > 0) {
-                        assetsHtml = `<div class="release-assets">
-                            ${release.assets.map(asset => `<a href="${asset.browser_download_url}" class="asset-link">⬇ ${asset.name}</a>`).join('')}
-                        </div>`;
-                    } else {
-                        assetsHtml = `<div class="release-assets">
-                            <a href="${release.html_url}" target="_blank" class="asset-link">View on GitHub</a>
-                            <a href="${release.zipball_url}" class="asset-link">⬇ Source Code (zip)</a>
-                        </div>`;
-                    }
-                    
-                    // Basic markdown to text cleanup for release body (keep it simple)
-                    const bodyText = release.body ? release.body.substring(0, 300) + (release.body.length > 300 ? '...' : '') : 'No description provided.';
-                    
-                    card.innerHTML = `
-                        <div class="release-header">
-                            <div class="release-version"><a href="${release.html_url}" target="_blank" style="color: inherit; text-decoration: none;">${release.name || release.tag_name}</a></div>
-                            <div class="release-date">${date}</div>
-                        </div>
-                        <div class="release-body">${bodyText}</div>
-                        ${assetsHtml}
-                    `;
-                    releasesContainer.appendChild(card);
-                });
             })
             .catch(error => {
-                releasesContainer.innerHTML = '<div class="release-card"><p>Failed to load releases from GitHub.</p></div>';
                 console.error('Error fetching releases:', error);
+                fetchTagsAsReleases();
             });
+
+        function fetchTagsAsReleases() {
+            fetch('https://api.github.com/repos/iammohdrazi/ProcessScope/tags')
+                .then(response => response.json())
+                .then(data => {
+                    releasesContainer.innerHTML = '';
+                    if (!Array.isArray(data) || data.length === 0) {
+                        releasesContainer.innerHTML = '<div class="release-card"><p>No official releases found yet. Check back soon!</p></div>';
+                        return;
+                    }
+                    
+                    // Transform tags into mock release objects
+                    const mockReleases = data.map(tag => ({
+                        name: tag.name,
+                        tag_name: tag.name,
+                        published_at: null,
+                        body: 'Release tagged as ' + tag.name,
+                        html_url: `https://github.com/iammohdrazi/ProcessScope/releases/tag/${tag.name}`,
+                        zipball_url: tag.zipball_url
+                    }));
+                    
+                    renderReleases(mockReleases);
+                })
+                .catch(err => {
+                    releasesContainer.innerHTML = '<div class="release-card"><p>Failed to load releases or tags from GitHub.</p></div>';
+                    console.error('Error fetching tags:', err);
+                });
+        }
+
+        function renderReleases(releases) {
+            releasesContainer.innerHTML = '';
+            // Show top 5
+            const latest = releases.slice(0, 5);
+            
+            latest.forEach(release => {
+                const card = document.createElement('div');
+                card.className = 'release-card';
+                
+                const dateStr = release.published_at ? new Date(release.published_at).toLocaleDateString() : 'N/A';
+                
+                let assetsHtml = '';
+                if (release.assets && release.assets.length > 0) {
+                    assetsHtml = `<div class="release-assets">
+                        ${release.assets.map(asset => `<a href="${asset.browser_download_url}" class="asset-link">⬇ ${asset.name}</a>`).join('')}
+                    </div>`;
+                } else {
+                    assetsHtml = `<div class="release-assets">
+                        <a href="${release.html_url}" target="_blank" class="asset-link">View on GitHub</a>
+                        <a href="${release.zipball_url}" class="asset-link">⬇ Source Code (zip)</a>
+                    </div>`;
+                }
+                
+                const bodyText = release.body ? release.body.substring(0, 300) + (release.body.length > 300 ? '...' : '') : 'No description provided.';
+                
+                card.innerHTML = `
+                    <div class="release-header">
+                        <div class="release-version"><a href="${release.html_url}" target="_blank" style="color: inherit; text-decoration: none;">${release.name || release.tag_name}</a></div>
+                        <div class="release-date">${dateStr !== 'N/A' ? dateStr : ''}</div>
+                    </div>
+                    <div class="release-body">${bodyText}</div>
+                    ${assetsHtml}
+                `;
+                releasesContainer.appendChild(card);
+            });
+        }
     }
 });

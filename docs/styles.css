@@ -44,13 +44,19 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
-.logo {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--primary);
+.logo, .footer-logo {
     display: flex;
     align-items: center;
     gap: 10px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.footer-logo {
+    font-size: 1.25rem;
+    justify-content: center;
 }
 
 .logo-icon {
@@ -63,22 +69,15 @@ body {
     height: 24px;
 }
 
-.footer-logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
 .nav-links {
     display: flex;
     align-items: center;
+    gap: 1.5rem;
 }
 
 .nav-links a {
     color: var(--text-main);
     text-decoration: none;
-    margin-left: 2rem;
     font-weight: 600;
     transition: color 0.3s ease;
 }
@@ -443,12 +442,14 @@ body {
     display: flex;
     gap: 2rem;
     justify-content: center;
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
+    flex-wrap: wrap;
 }
 
 .support-card {
     flex: 1;
+    min-width: 250px;
     background: #ffffff;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -456,12 +457,20 @@ body {
     text-align: center;
     text-decoration: none;
     transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .support-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.08);
     border-color: var(--primary);
+}
+
+.support-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
 }
 
 .support-card h3 {
@@ -485,6 +494,16 @@ body {
 .footer p {
     color: var(--text-muted);
     font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.footer a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
 }
 
 /* Responsive */
@@ -507,14 +526,13 @@ body {
         transform: none;
         margin-top: 2rem;
     }
-    
-    .support-links {
-        flex-direction: column;
-    }
 }
 
 @media (max-width: 768px) {
     .nav-links {
         display: none; /* simple mobile behavior */
+    }
+    .support-links {
+        flex-direction: column;
     }
 }

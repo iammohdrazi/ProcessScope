@@ -13,16 +13,20 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">
-            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%230ea5e9' stroke-width='10'/%3E%3Cpath d='M30 50 A 20 20 0 0 1 70 50' fill='none' stroke='%2338bdf8' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%230284c7'/%3E%3C/svg%3E" alt="Logo" class="logo-icon">
-            ProcessScope
-        </div>
+        <a href="#" class="logo">
+            <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#0ea5e9" stroke-width="10"/>
+                <path d="M30 50 A 20 20 0 0 1 70 50" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="50" cy="50" r="10" fill="#0284c7"/>
+            </svg>
+            <span>ProcessScope</span>
+        </a>
         <div class="nav-links">
             <a href="#about">About</a>
-            <a href="#releases">Download</a>
             <a href="#features">Features</a>
-            <a href="#support">Get Support</a>
-            <a href="#support">Manuals</a>
+            <a href="#releases">Download</a>
+            <a href="#quick-start">Quick Start</a>
+            <a href="#support">Support</a>
             <a href="https://github.com/iammohdrazi/ProcessScope" target="_blank">Contribute</a>
         </div>
     </nav>
@@ -43,9 +47,7 @@
                     <span class="dot yellow"></span>
                     <span class="dot green"></span>
                 </div>
-                <div class="terminal-body" id="terminal-text">
-                    <!-- Typed text will appear here -->
-                </div>
+                <div class="terminal-body" id="terminal-text"></div>
             </div>
         </div>
     </header>
@@ -86,13 +88,20 @@
         </div>
     </section>
 
+    <section id="releases" class="releases-section">
+        <h2>Releases &amp; Downloads</h2>
+        <div id="releases-container" class="releases-container">
+            <div class="loading-spinner">Loading releases...</div>
+        </div>
+    </section>
+
     <section id="quick-start" class="quickstart-section">
         <h2>Quick Start</h2>
         <div class="code-container">
-            <div class="code-header">Install & Run</div>
+            <div class="code-header">Install &amp; Run</div>
             <pre><code># Clone the repository
 git clone https://github.com/iammohdrazi/ProcessScope.git
-cd processscope
+cd ProcessScope
 
 # Install in development mode
 make install
@@ -105,23 +114,23 @@ sudo .venv/bin/processscope start
         </div>
     </section>
 
-    <section id="releases" class="releases-section">
-        <h2>Releases & Downloads</h2>
-        <div id="releases-container" class="releases-container">
-            <div class="loading-releases" style="text-align: center; color: var(--text-muted);">Fetching latest releases from GitHub...</div>
-        </div>
-    </section>
-
     <section id="support" class="support-section">
-        <h2>Get Support & Manuals</h2>
+        <h2>Get Support &amp; Documentation</h2>
         <div class="support-links">
             <a href="https://github.com/iammohdrazi/ProcessScope/issues" target="_blank" class="support-card">
+                <div class="support-icon">🐛</div>
                 <h3>Issue Tracker</h3>
                 <p>Report bugs or request new features on our GitHub Issues page.</p>
             </a>
-            <a href="https://github.com/iammohdrazi/ProcessScope/wiki" target="_blank" class="support-card">
-                <h3>Manuals & Wiki</h3>
-                <p>Read detailed documentation, guides, and manuals for advanced usage.</p>
+            <a href="https://github.com/iammohdrazi/ProcessScope/blob/main/README.md" target="_blank" class="support-card">
+                <div class="support-icon">📖</div>
+                <h3>Manuals &amp; Docs</h3>
+                <p>Read detailed documentation, guides, and manuals for setup and usage.</p>
+            </a>
+            <a href="https://github.com/iammohdrazi/ProcessScope/blob/main/CONTRIBUTING.md" target="_blank" class="support-card">
+                <div class="support-icon">🤝</div>
+                <h3>Contribute</h3>
+                <p>Learn how to contribute code, report issues, and join the community.</p>
             </a>
         </div>
     </section>
@@ -129,10 +138,14 @@ sudo .venv/bin/processscope start
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-logo">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%230ea5e9' stroke-width='10'/%3E%3Cpath d='M30 50 A 20 20 0 0 1 70 50' fill='none' stroke='%2338bdf8' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%230284c7'/%3E%3C/svg%3E" alt="Logo" class="logo-icon-footer">
-                ProcessScope
+                <svg class="logo-icon-footer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#0ea5e9" stroke-width="10"/>
+                    <path d="M30 50 A 20 20 0 0 1 70 50" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+                    <circle cx="50" cy="50" r="10" fill="#0284c7"/>
+                </svg>
+                <span>ProcessScope</span>
             </div>
-            <p>Licensed under GNU General Public License v2.0.</p>
+            <p>Licensed under GNU General Public License v2.0 &mdash; See <a href="https://github.com/iammohdrazi/ProcessScope/blob/main/LICENSE" target="_blank">LICENSE</a> for details.</p>
         </div>
     </footer>
 
