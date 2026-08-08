@@ -76,6 +76,7 @@ where = ["src"]
 processscope = [
     "dashboard/**/*",
     "py.typed",
+    "_build_meta.json",
 ]
 
 [tool.ruff]
