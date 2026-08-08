@@ -272,11 +272,22 @@ class ProcessAttacher:
             except Exception as e:
                 logger.error("Error detaching from process", pid=pid, error=str(e))
 
+    def mark_exited(self, pid: int) -> None:
+        """
+        Mark a process as exited (called by the engine monitor).
+
+        This updates the state in the attacher's registry. The engine
+        monitor is responsible for emitting the single structured log line.
+        """
+        if pid in self._hooked:
+            self._hooked[pid].state = HookState.PROCESS_EXITED
+
     def refresh_states(self) -> None:
         """Check and update the state of all hooked processes."""
         for pid, hooked in list(self._hooked.items()):
-            if not hooked.is_alive():
-                logger.warning("Hooked process has exited", pid=pid, name=hooked.name)
+            if not hooked.is_alive() and hooked.state != HookState.PROCESS_EXITED:
+                # Update state silently — the engine monitor already logs
+                # a single structured PS112 line for this event
                 hooked.state = HookState.PROCESS_EXITED
 
             # Refresh child process list

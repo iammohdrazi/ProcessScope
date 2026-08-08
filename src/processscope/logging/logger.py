@@ -6,16 +6,22 @@ Two parallel logging channels:
 1. **System Logging (journald/syslog)**
    - Writes to stdout/stderr → captured by systemd → journald
    - Also writes to syslog via SysLogHandler → appears in /var/log/messages
-   - Contains: service lifecycle, critical errors, security events
+   - Contains: service lifecycle events only (start, stop, attach, detach, fatal errors)
    - Facility: LOG_DAEMON, identifier: "processscope"
    - Format: processscope[PS100]: message (key=value, ...)
+   - Level: WARNING+ in production (only errors and critical events)
 
 2. **Application File Logging**
    - Writes structured JSON to /var/log/processscope/*.log
-   - processscope.log — main application log
+   - processscope.log — main application log (INFO+)
    - telemetry.log — telemetry pipeline events
    - audit.log — security audit trail (managed by AuditLogger)
    - Managed by logrotate for rotation
+
+3. **Debug File Logging (optional)**
+   - Only enabled when debug_log_enabled=True in config
+   - Writes all DEBUG+ logs as structured JSON to /tmp/processscope/debug.log
+   - Useful for troubleshooting without polluting journald
 """
 
 from __future__ import annotations
@@ -76,14 +82,15 @@ class StructuredJSONFormatter(logging.Formatter):
 
 class PSCodeConsoleFormatter(logging.Formatter):
     """
-    Plain-text console formatter for production mode (journald/syslog).
+    Minimal plain-text formatter for production mode (journald/syslog).
 
-    Produces clean, parseable output:
+    Only emits lines with PS codes (lifecycle events) or ERROR/CRITICAL messages.
+    Normal INFO/WARNING from collectors are suppressed at the handler level.
+
+    Format:
         processscope[PS100]: ProcessScope service started (version=0.1.0)
-        processscope: Telemetry event collected
-
-    When no PS code is attached, uses the standard format:
-        processscope: <message> (key=value, ...)
+        processscope[PS112]: Process exited (pid=1234)
+        processscope[PS300]: Fatal startup error (error=...)
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -207,15 +214,13 @@ _loggers: dict[str, StructuredLogger] = {}
 
 def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
     """
-    Initialize the dual logging system.
+    Initialize the dual (or triple) logging system.
 
-    This sets up:
-    1. Console handler (stdout) → captured by systemd → journald
-       - Production: PSCodeConsoleFormatter (plain text with PS codes)
-       - Development: ConsoleFormatter (colored, human-friendly)
-    2. Syslog handler → /var/log/messages via rsyslog
-    3. File handler → /var/log/processscope/processscope.log (JSON)
-    4. Telemetry file handler → /var/log/processscope/telemetry.log (JSON)
+    Handlers:
+    1. Console (stdout) → journald — WARNING+ only in production, DEBUG+ in dev
+    2. Syslog handler → /var/log/messages (INFO+ for PS-coded events)
+    3. Application file handler → /var/log/processscope/processscope.log (INFO+ JSON)
+    4. Debug file handler → /tmp/processscope/debug.log (DEBUG+ JSON, only if enabled)
     """
     global _initialized
 
@@ -223,19 +228,24 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
         return
 
     root_logger = logging.getLogger("processscope")
-    root_logger.setLevel(getattr(logging, config.level.upper(), logging.INFO))
+    root_logger.setLevel(logging.DEBUG)  # Root captures all; handlers filter
     root_logger.handlers.clear()
 
     # ── 1. Console Handler (stdout → journald via systemd) ────────
     console_handler = logging.StreamHandler(sys.stdout)
     if dev_mode:
         console_handler.setFormatter(ConsoleFormatter())
+        console_handler.setLevel(logging.DEBUG)
     else:
         console_handler.setFormatter(PSCodeConsoleFormatter())
-    console_handler.setLevel(logging.DEBUG if dev_mode else logging.WARNING)
+        # In production: only emit WARNING+ to journald.
+        # This keeps journald clean — normal telemetry noise is silenced.
+        # PS-coded INFO events (start/stop/attach/detach) are logged via
+        # the syslog handler at INFO level.
+        console_handler.setLevel(logging.WARNING)
     root_logger.addHandler(console_handler)
 
-    # ── 2. Syslog Handler (→ /var/log/messages) ──────────────────
+    # ── 2. Syslog Handler (→ /var/log/messages or journald) ──────
     if config.syslog_enabled and sys.platform == "linux":
         try:
             syslog_handler = logging.handlers.SysLogHandler(
@@ -244,11 +254,15 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
                     config.syslog_facility, logging.handlers.SysLogHandler.LOG_DAEMON
                 ),
             )
+            # Format: processscope[PS100]: INFO processscope.main — message
             syslog_formatter = logging.Formatter(
-                f"{config.syslog_identifier}[%(process)d]: %(levelname)s %(name)s — %(message)s"
+                f"{config.syslog_identifier}[%(process)d][%(levelname)s]: %(message)s"
             )
             syslog_handler.setFormatter(syslog_formatter)
+            # Syslog gets INFO+ but only for PS-coded messages (lifecycle events)
+            # We use a custom filter so routine telemetry doesn't pollute syslog
             syslog_handler.setLevel(logging.INFO)
+            syslog_handler.addFilter(_PSCodeFilter())
             root_logger.addHandler(syslog_handler)
         except (OSError, ConnectionError):
             # Syslog not available (e.g., container without /dev/log)
@@ -259,7 +273,7 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Main application log
+        # Main application log (INFO+)
         main_log = log_dir / "processscope.log"
         file_handler = logging.handlers.RotatingFileHandler(
             main_log,
@@ -268,7 +282,7 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
             encoding="utf-8",
         )
         file_handler.setFormatter(StructuredJSONFormatter())
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(logging.INFO)
         root_logger.addHandler(file_handler)
 
         # Telemetry log (separate file for collector events)
@@ -287,11 +301,69 @@ def setup_logging(config: LoggingConfig, dev_mode: bool = False) -> None:
     except PermissionError:
         # Running without root — skip file logging
         console_handler.setFormatter(ConsoleFormatter())
+        console_handler.setLevel(logging.DEBUG)
         root_logger.warning(
             f"Cannot write to {log_dir} — file logging disabled. Run as root or use --dev."
         )
 
+    # ── 4. Debug File Handler (optional, /tmp) ────────────────────
+    if config.debug_log_enabled:
+        _setup_debug_handler(root_logger, config)
+
     _initialized = True
+
+
+def _setup_debug_handler(root_logger: logging.Logger, config: LoggingConfig) -> None:
+    """Set up the optional verbose debug log handler to /tmp."""
+    try:
+        debug_dir = Path(config.debug_log_path)
+        debug_dir.mkdir(parents=True, exist_ok=True)
+
+        debug_log = debug_dir / "debug.log"
+        debug_handler = logging.handlers.RotatingFileHandler(
+            debug_log,
+            maxBytes=50 * 1024 * 1024,  # 50 MB
+            backupCount=3,
+            encoding="utf-8",
+        )
+        debug_handler.setFormatter(StructuredJSONFormatter())
+        debug_handler.setLevel(logging.DEBUG)
+        root_logger.addHandler(debug_handler)
+        root_logger.info(
+            f"Debug logging enabled — writing to {debug_log}"
+        )
+    except (PermissionError, OSError) as e:
+        root_logger.warning(f"Could not enable debug log at {config.debug_log_path}: {e}")
+
+
+def enable_debug_logging(config: LoggingConfig) -> None:
+    """
+    Dynamically enable debug logging at runtime (e.g., triggered from the API).
+
+    This is called when the user enables debug logging via the dashboard toggle
+    or CLI without needing to restart the service.
+    """
+    root_logger = logging.getLogger("processscope")
+    _setup_debug_handler(root_logger, config)
+
+
+class _PSCodeFilter(logging.Filter):
+    """
+    Filter that only passes log records that have a PS code attached.
+
+    Used on the syslog handler to ensure only structured lifecycle events
+    (start, stop, attach, detach, errors) are written to syslog.
+    Routine telemetry noise is suppressed.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Allow records with PS codes (important lifecycle events)
+        if hasattr(record, "_ps_code") and record._ps_code:
+            return True
+        # Always allow ERROR+ regardless of PS code
+        if record.levelno >= logging.ERROR:
+            return True
+        return False
 
 
 def get_logger(name: str) -> StructuredLogger:

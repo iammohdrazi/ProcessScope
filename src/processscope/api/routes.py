@@ -174,6 +174,31 @@ async def detach_process(pid: int) -> dict:
         raise HTTPException(status_code=404, detail=f"PID {pid} is not hooked")
 
 
+@router.delete("/processes")
+async def detach_all_processes() -> dict:
+    """Detach from all hooked processes at once."""
+    hooked = list(app_state.attacher.hooked_processes.keys())
+    detached = []
+    errors = []
+
+    for pid in hooked:
+        try:
+            await app_state.engine.stop_collectors(pid)
+            app_state.engine.session_manager.stop_recording(pid)
+            app_state.attacher.detach(pid)
+            detached.append(pid)
+        except Exception as e:
+            errors.append({"pid": pid, "error": str(e)})
+
+    return {
+        "detached_count": len(detached),
+        "detached_pids": detached,
+        "errors": errors,
+        "status": "ok" if not errors else "partial",
+    }
+
+
+
 # ── Process Metadata ─────────────────────────────────────────────────
 
 @router.get("/processes/{pid}/metadata")
@@ -368,3 +393,55 @@ async def list_sessions() -> dict:
     """List all recorded sessions."""
     sessions = app_state.engine.session_manager.list_sessions()
     return {"sessions": sessions}
+
+
+# ── Debug Logging Toggle ──────────────────────────────────────────────
+
+@router.post("/debug-log/enable")
+async def enable_debug_log() -> dict:
+    """Enable verbose debug logging to /tmp/processscope/debug.log at runtime."""
+    from processscope.logging import enable_debug_logging
+    config = app_state.config
+    config.logging.debug_log_enabled = True
+    enable_debug_logging(config.logging)
+    return {
+        "status": "enabled",
+        "path": f"{config.logging.debug_log_path}/debug.log",
+        "message": "Debug logging enabled — all DEBUG+ events are now written to /tmp/processscope/debug.log",
+    }
+
+
+@router.post("/debug-log/disable")
+async def disable_debug_log() -> dict:
+    """Disable verbose debug logging (restarts would be needed to fully clean handlers)."""
+    import logging
+    app_state.config.logging.debug_log_enabled = False
+    # Remove debug file handlers from root logger
+    root_logger = logging.getLogger("processscope")
+    handlers_to_remove = [
+        h for h in root_logger.handlers
+        if hasattr(h, 'baseFilename') and 'debug.log' in str(h.baseFilename)
+    ]
+    for h in handlers_to_remove:
+        root_logger.removeHandler(h)
+        h.close()
+    return {
+        "status": "disabled",
+        "message": "Debug logging disabled",
+    }
+
+
+@router.get("/debug-log/status")
+async def get_debug_log_status() -> dict:
+    """Get current debug logging status."""
+    config = app_state.config
+    import logging
+    root_logger = logging.getLogger("processscope")
+    has_debug_handler = any(
+        hasattr(h, 'baseFilename') and 'debug.log' in str(h.baseFilename)
+        for h in root_logger.handlers
+    )
+    return {
+        "enabled": has_debug_handler,
+        "path": f"{config.logging.debug_log_path}/debug.log",
+    }

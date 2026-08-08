@@ -22,6 +22,7 @@ class BuildInfo:
     display_name: str = "ProcessScope"
     version: str = "0.1.0"
     build_number: str = "local"
+    build_type: str = "local"  # "local" | "release"
     git_commit: str = "unknown"
     git_branch: str = "unknown"
     build_date: str = "unknown"
@@ -36,6 +37,7 @@ class BuildInfo:
             "display_name": self.display_name,
             "version": self.version,
             "build_number": self.build_number,
+            "build_type": self.build_type,
             "git_commit": self.git_commit,
             "git_branch": self.git_branch,
             "build_date": self.build_date,
@@ -49,7 +51,7 @@ class BuildInfo:
         return (
             f"ProcessScope — Linux Process Observability Platform\n"
             f"  Version:      {self.version}\n"
-            f"  Build:        {self.build_number}\n"
+            f"  Build:        {self.build_number}  ({self.build_type})\n"
             f"  Git Commit:   {self.git_commit}\n"
             f"  Git Branch:   {self.git_branch}\n"
             f"  Build Date:   {self.build_date}\n"
@@ -73,6 +75,7 @@ def get_build_info() -> BuildInfo:
             return BuildInfo(
                 version=data.get("version", "0.1.0"),
                 build_number=data.get("build_number", "local"),
+                build_type=data.get("build_type", "local"),
                 git_commit=data.get("git_commit", "unknown"),
                 git_branch=data.get("git_branch", "unknown"),
                 build_date=data.get("build_date", "unknown"),

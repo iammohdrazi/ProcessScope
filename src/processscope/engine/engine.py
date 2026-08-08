@@ -6,6 +6,7 @@ Orchestrates all telemetry collection:
   - Consumes events from collector queues
   - Feeds events to Timeline and Storage
   - Provides streaming interface for WebSocket API
+  - Auto-detects process exits and cleans up collectors
 """
 
 from __future__ import annotations
@@ -14,10 +15,11 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
-from processscope.collector.base import BaseCollector, CollectorRegistry, TelemetryEvent
+from processscope.collector.base import BaseCollector, CollectorRegistry, CollectorStatus, TelemetryEvent
 from processscope.engine.timeline import Timeline
 from processscope.engine.session import SessionManager
 from processscope.logging import get_logger
+from processscope.logging.error_codes import PS112
 
 logger = get_logger("engine")
 
@@ -26,6 +28,10 @@ class TelemetryEngine:
     """
     Central telemetry engine that orchestrates collection,
     correlation, storage, and streaming of all telemetry data.
+
+    Includes a background monitor that detects when hooked processes
+    exit and automatically stops their collectors — emitting a single
+    structured log line rather than per-collector warning spam.
     """
 
     def __init__(
@@ -56,6 +62,10 @@ class TelemetryEngine:
         self._running = False
         self._total_events: int = 0
         self._start_time: Optional[datetime] = None
+        self._monitor_task: Optional[asyncio.Task] = None
+
+        # Callback invoked when a process exits (set by the API layer)
+        self.on_process_exited: Optional[Callable[[int, str], None]] = None
 
     @property
     def is_running(self) -> bool:
@@ -73,22 +83,82 @@ class TelemetryEngine:
 
     async def start(self) -> None:
         """Start the telemetry engine."""
-        logger.info("Starting telemetry engine",
-                     collectors=self._collector_names,
-                     poll_interval_ms=self._poll_interval_ms)
+        logger.info(
+            "Starting telemetry engine",
+            collectors=self._collector_names,
+            poll_interval_ms=self._poll_interval_ms,
+        )
         self._running = True
         self._start_time = datetime.now(timezone.utc)
+
+        # Start the background process exit monitor
+        self._monitor_task = asyncio.create_task(self._monitor_processes())
 
     async def stop(self) -> None:
         """Stop the engine and all active collectors."""
         logger.info("Stopping telemetry engine")
         self._running = False
 
+        # Stop monitor task first
+        if self._monitor_task:
+            self._monitor_task.cancel()
+            try:
+                await self._monitor_task
+            except asyncio.CancelledError:
+                pass
+
         # Stop all collectors for all PIDs
         for pid in list(self._pid_collectors.keys()):
             await self.stop_collectors(pid)
 
         logger.info("Telemetry engine stopped", total_events=self._total_events)
+
+    async def _monitor_processes(self) -> None:
+        """
+        Background task: checks every second if any hooked process has exited.
+
+        When all collectors for a PID have stopped themselves (because the
+        process is gone), this monitor calls stop_collectors() to clean up
+        the remaining infrastructure and emits a single structured log line.
+        """
+        while self._running:
+            try:
+                await asyncio.sleep(1.0)
+
+                for pid, collectors in list(self._pid_collectors.items()):
+                    if not collectors:
+                        continue
+
+                    # Check if the process exited (any collector flagged it)
+                    exited = any(c.process_exited for c in collectors)
+                    all_stopped = all(
+                        c.status in (CollectorStatus.STOPPED, CollectorStatus.ERROR)
+                        for c in collectors
+                    )
+
+                    if exited or all_stopped:
+                        # Determine the process name from any available collector
+                        pid_name = f"pid={pid}"
+                        if collectors:
+                            pid_name = f"pid={pid}"
+
+                        # Emit a single clean log line for the process exit
+                        logger.info(PS112, pid=pid)
+
+                        # Clean up all infrastructure for this PID
+                        await self.stop_collectors(pid)
+
+                        # Notify the attacher/API layer to update state
+                        if self.on_process_exited:
+                            try:
+                                self.on_process_exited(pid, "")
+                            except Exception:
+                                pass
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error("Process monitor error", error=str(e))
 
     async def start_collectors(self, pid: int) -> None:
         """
@@ -98,10 +168,7 @@ class TelemetryEngine:
             pid: Process ID to collect telemetry for.
         """
         if pid in self._pid_collectors:
-            logger.warning("Collectors already running for PID", pid=pid)
             return
-
-        logger.info("Starting collectors for PID", pid=pid, collectors=self._collector_names)
 
         # Import all collector modules to trigger registration
         _import_collectors()
@@ -121,15 +188,20 @@ class TelemetryEngine:
         self._pid_queues[pid] = queue
 
         # Start all collectors
+        started = []
         for collector in collectors:
             try:
                 await collector.start(pid, queue)
-                logger.info("Collector started", collector=collector.name, pid=pid)
+                started.append(collector)
             except Exception as e:
-                logger.error("Failed to start collector",
-                             collector=collector.name, pid=pid, error=str(e))
+                logger.error(
+                    "Failed to start collector",
+                    collector=collector.name,
+                    pid=pid,
+                    error=str(e),
+                )
 
-        self._pid_collectors[pid] = collectors
+        self._pid_collectors[pid] = started
 
         # Start event consumer task
         self._consumer_tasks[pid] = asyncio.create_task(self._consume_events(pid, queue))
@@ -138,8 +210,6 @@ class TelemetryEngine:
         """Stop all collectors for a specific PID."""
         if pid not in self._pid_collectors:
             return
-
-        logger.info("Stopping collectors for PID", pid=pid)
 
         # Cancel consumer task
         if pid in self._consumer_tasks:
@@ -155,16 +225,19 @@ class TelemetryEngine:
             try:
                 await collector.stop()
             except Exception as e:
-                logger.error("Error stopping collector",
-                             collector=collector.name, pid=pid, error=str(e))
+                logger.error(
+                    "Error stopping collector",
+                    collector=collector.name,
+                    pid=pid,
+                    error=str(e),
+                )
 
         del self._pid_collectors[pid]
-        del self._pid_queues[pid]
+        if pid in self._pid_queues:
+            del self._pid_queues[pid]
 
     async def _consume_events(self, pid: int, queue: asyncio.Queue[TelemetryEvent]) -> None:
         """Consume events from a PID's collector queue and distribute them."""
-        logger.debug("Event consumer started", pid=pid)
-
         while self._running:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=1.0)
@@ -192,17 +265,13 @@ class TelemetryEngine:
             except Exception as e:
                 logger.error("Event consumer error", pid=pid, error=str(e))
 
-        logger.debug("Event consumer stopped", pid=pid)
-
     def subscribe(self, subscriber_id: str, callback: Callable[[TelemetryEvent], Any]) -> None:
         """Subscribe to receive all telemetry events."""
         self._subscribers[subscriber_id] = callback
-        logger.debug("Subscriber added", subscriber_id=subscriber_id)
 
     def unsubscribe(self, subscriber_id: str) -> None:
         """Remove a subscriber."""
         self._subscribers.pop(subscriber_id, None)
-        logger.debug("Subscriber removed", subscriber_id=subscriber_id)
 
     def get_collector_status(self, pid: int | None = None) -> list[dict[str, Any]]:
         """Get status of all active collectors."""

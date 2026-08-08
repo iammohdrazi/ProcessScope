@@ -49,6 +49,10 @@ class LoggingConfig(BaseModel):
     json_format: bool = True
     max_file_size_mb: int = 50
     backup_count: int = 7
+    # When True, write verbose debug logs to /tmp/processscope/
+    # Enable via: processscope start --debug-log
+    debug_log_enabled: bool = False
+    debug_log_path: str = "/tmp/processscope"
 
 
 class StorageConfig(BaseModel):

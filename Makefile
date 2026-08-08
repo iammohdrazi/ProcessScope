@@ -17,6 +17,7 @@ GIT_SHA        := $(shell git rev-parse --short HEAD 2>/dev/null || echo "nogit"
 GIT_BRANCH     := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE     := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILD_NUMBER   := $(shell date -u +"%Y%m%d.%H%M%S").$(GIT_SHA)
+BUILD_TYPE     := $(or ${BUILD_TYPE},local)
 
 # Directories
 SRC_DIR        := src
@@ -82,7 +83,7 @@ build: venv dashboard
 	@echo "━━━ Building ProcessScope v$(VERSION) (build: $(BUILD_NUMBER)) ━━━"
 	@mkdir -p $(BUILD_DIR)
 	# Write build metadata
-	@echo '{"version":"$(VERSION)","build_number":"$(BUILD_NUMBER)","git_commit":"$(GIT_SHA)","git_branch":"$(GIT_BRANCH)","build_date":"$(BUILD_DATE)"}' \
+	@echo '{"version":"$(VERSION)","build_number":"$(BUILD_NUMBER)","build_type":"$(BUILD_TYPE)","git_commit":"$(GIT_SHA)","git_branch":"$(GIT_BRANCH)","build_date":"$(BUILD_DATE)"}' \
 		> $(SRC_DIR)/processscope/_build_meta.json
 	# Copy dashboard build into package
 	@if [ -d "$(WEB_DIR)/dist" ]; then \

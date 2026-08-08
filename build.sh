@@ -14,6 +14,11 @@ echo "━━━ ProcessScope Build Script ━━━"
 VERSION="${VERSION:-0.1.0}"
 export VERSION
 
+# Local builds are always marked as "local" build type
+# Release builds are marked as "release" by the GitHub workflow
+BUILD_TYPE="${BUILD_TYPE:-local}"
+export BUILD_TYPE
+
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1

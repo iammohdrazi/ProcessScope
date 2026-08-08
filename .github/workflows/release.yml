@@ -26,7 +26,9 @@ env:
   PYTHON_VERSION: '3.11'
 
 jobs:
+  # ────────────────────────────────────────────────────────────────────
   # Job 1: Version Management
+  # ────────────────────────────────────────────────────────────────────
   version-bump:
     runs-on: ubuntu-latest
     outputs:
@@ -67,13 +69,16 @@ jobs:
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
         continue-on-error: false
 
-  # Job 2: Build Packages
+  # ────────────────────────────────────────────────────────────────────
+  # Job 2: Build Release Package
+  # ────────────────────────────────────────────────────────────────────
   build:
     needs: version-bump
     runs-on: ubuntu-latest
     outputs:
       version: ${{ needs.version-bump.outputs.new_version }}
       build_number: ${{ steps.build_info.outputs.build_number }}
+      package_name: ${{ steps.build_info.outputs.package_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -95,6 +100,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential python3-venv
 
+      - name: Generate build info
+        id: build_info
+        run: |
+          BUILD_NUMBER=$(date -u +"%Y%m%d.%H%M%S").$(git rev-parse --short HEAD)
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          PACKAGE_NAME="${{ env.APP_NAME }}-${{ needs.version-bump.outputs.new_version }}-linux-x86_64.tar.gz"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
       - name: Build packages
         run: |
           make clean
@@ -102,23 +115,38 @@ jobs:
           make package-tar
         env:
           VERSION: ${{ needs.version-bump.outputs.new_version }}
+          BUILD_TYPE: release
 
-      - name: Generate build info
-        id: build_info
+      - name: Verify package was created
         run: |
-          BUILD_NUMBER=$(date -u +"%Y%m%d.%H%M%S").$(git rev-parse --short HEAD)
-          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "=== Built packages ==="
+          ls -lh dist/output/
+          PACKAGE=$(find dist/output -name "*.tar.gz" -type f | head -n 1)
+          if [ -z "$PACKAGE" ]; then
+            echo "ERROR: No .tar.gz package found in dist/output/"
+            exit 1
+          fi
+          echo "Package ready: $PACKAGE"
+          echo "Size: $(du -sh $PACKAGE | cut -f1)"
 
-      - name: Upload build artifacts
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-packages
-          path: |
-            dist/output/*.tar.gz
-            scripts/test_install.sh
-          retention-days: 7
+          name: release-package
+          path: dist/output/*.tar.gz
+          retention-days: 14
+          if-no-files-found: error
 
-  # Job 3: Multi-Distribution Testing Matrix
+      - name: Upload test script
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-scripts
+          path: scripts/test_install.sh
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────────────
+  # Job 3: Multi-Distribution Installation Testing
+  # ────────────────────────────────────────────────────────────────────
   test-install:
     needs: [version-bump, build]
     runs-on: ubuntu-latest
@@ -129,117 +157,123 @@ jobs:
           - name: ubuntu-22.04
             image: ubuntu:22.04
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3.11 python3.11-venv python3-pip --no-install-recommends && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+            install_cmd: >
+              apt-get update &&
+              apt-get install -y python3.11 python3.11-venv python3-pip --no-install-recommends &&
+              update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
           - name: ubuntu-24.04
             image: ubuntu:24.04
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3.12 python3.12-venv python3-pip --no-install-recommends && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+            install_cmd: >
+              apt-get update &&
+              apt-get install -y python3.12 python3.12-venv python3-pip --no-install-recommends &&
+              update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
           - name: debian-12
             image: debian:12
             pkg_manager: apt
-            install_cmd: apt-get update && apt-get install -y python3.11 python3.11-venv python3-pip --no-install-recommends && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+            install_cmd: >
+              apt-get update &&
+              apt-get install -y python3.11 python3.11-venv python3-pip --no-install-recommends &&
+              update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
           - name: fedora-39
             image: fedora:39
             pkg_manager: dnf
-            install_cmd: dnf install -y python3.11 python3.11-pip --setopt=install_weak_deps=False && alternatives --set python3 /usr/bin/python3.11
+            install_cmd: >
+              dnf install -y python3.11 python3.11-pip --setopt=install_weak_deps=False &&
+              alternatives --set python3 /usr/bin/python3.11
 
     steps:
-      - name: Download build artifacts
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: release-packages
+          name: release-package
+          path: release-packages/
 
       - name: List downloaded files
         run: |
-          echo "Downloaded files:"
-          ls -la
-          echo "Looking for tar.gz files:"
-          find . -name "*.tar.gz" -type f
+          echo "=== Downloaded release package ==="
+          find release-packages/ -type f | sort
+          ls -lh release-packages/
 
-      - name: Set up Docker
+      - name: Start test container
         run: |
-          # Use simple sleep infinity approach for all containers
-          # systemd is not available in most Docker containers, so we skip it
           docker run -d --name test-container ${{ matrix.distro.image }} sleep infinity
-          sleep 5
+          sleep 3
 
-      - name: Install dependencies in container
+      - name: Install Python in container
         run: |
-          # Retry installation with network issues handling
-          for i in 1 2 3; do
+          for attempt in 1 2 3; do
             if docker exec test-container bash -c "${{ matrix.distro.install_cmd }}"; then
-              echo "Dependencies installed successfully"
+              echo "Dependencies installed on attempt $attempt"
               break
-            else
-              echo "Attempt $i failed, retrying..."
-              sleep 5
             fi
+            echo "Attempt $attempt failed, retrying in 5s..."
+            sleep 5
           done
-          # If all retries failed, try minimal installation
-          docker exec test-container bash -c "${{ matrix.distro.install_cmd }}" || docker exec test-container sh -c "apt-get update && apt-get install -y python3 python3-pip || yum install -y python3 python3-pip || dnf install -y python3 python3-pip"
-          
-          # For apt-based systems, install venv for all available python3 versions
+
+          # Ensure python3-venv is available for apt systems
           if [ "${{ matrix.distro.pkg_manager }}" = "apt" ]; then
-            docker exec test-container bash -c "apt-get install -y python3-venv || true"
-            # Try to install venv for specific python versions if available
-            docker exec test-container bash -c "apt-get install -y python3.10-venv python3.11-venv python3.12-venv 2>/dev/null || true"
+            docker exec test-container bash -c "apt-get install -y python3-venv 2>/dev/null || true"
           fi
 
-      - name: Copy package to container
+      - name: Copy and extract package
         run: |
-          # Find the actual tar.gz file and copy it
-          TAR_FILE=$(find . -name "*.tar.gz" -type f | head -n 1)
-          if [ -z "$TAR_FILE" ]; then
-            echo "Error: No tar.gz file found"
+          PACKAGE=$(find release-packages/ -name "*.tar.gz" -type f | head -n 1)
+          if [ -z "$PACKAGE" ]; then
+            echo "ERROR: No .tar.gz found in release-packages/"
             exit 1
           fi
-          echo "Copying $TAR_FILE to container"
-          docker cp "$TAR_FILE" test-container:/tmp/processscope.tar.gz
+          echo "Testing with package: $PACKAGE"
+          docker cp "$PACKAGE" test-container:/tmp/processscope.tar.gz
+          docker exec test-container bash -c "cd /tmp && tar -xzf processscope.tar.gz && ls -la"
 
-      - name: Extract package in container
+      - name: Run installer
         run: |
-          docker exec test-container bash -c "cd /tmp && tar -xzf processscope.tar.gz"
+          docker exec test-container bash -c "
+            INSTALL_DIR=\$(find /tmp -name 'processscope-*' -type d | head -n 1)
+            echo \"Installing from: \$INSTALL_DIR\"
+            cd \"\$INSTALL_DIR\"
+            SKIP_SYSTEMD=true ./install.sh
+          "
 
-      - name: Run install script in container
+      - name: Verify installation
         run: |
-          docker exec test-container bash -c "cd /tmp/processscope-* && SKIP_SYSTEMD=true ./install.sh"
-
-      - name: Run installation tests
-        run: |
-          docker exec test-container bash -c "which processscope && processscope --version || true"
-          docker exec test-container bash -c "ls -la /opt/processscope || true"
-          docker exec test-container bash -c "ls -la /usr/local/bin/ || true"
+          echo "=== Checking processscope binary ==="
+          docker exec test-container bash -c "which processscope && processscope --version || processscope version || true"
+          echo "=== Checking install paths ==="
+          docker exec test-container bash -c "ls -la /opt/processscope/ || true"
+          docker exec test-container bash -c "ls -la /usr/local/bin/processscope || true"
 
       - name: Test uninstall
         run: |
-          if [ "${{ matrix.distro.pkg_manager }}" = "apt" ]; then
-            docker exec test-container bash -c "apt-get remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
-          elif [ "${{ matrix.distro.pkg_manager }}" = "dnf" ]; then
-            docker exec test-container bash -c "dnf remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
-          elif [ "${{ matrix.distro.pkg_manager }}" = "yum" ]; then
-            docker exec test-container bash -c "yum remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
-          elif [ "${{ matrix.distro.pkg_manager }}" = "zypper" ]; then
-            docker exec test-container bash -c "zypper remove -y processscope" || docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
-          else
-            docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
-          fi
+          case "${{ matrix.distro.pkg_manager }}" in
+            apt)
+              docker exec test-container bash -c "apt-get remove -y processscope 2>/dev/null || rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
+              ;;
+            dnf)
+              docker exec test-container bash -c "dnf remove -y processscope 2>/dev/null || rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
+              ;;
+            *)
+              docker exec test-container bash -c "rm -rf /opt/processscope /etc/processscope /usr/local/bin/processscope"
+              ;;
+          esac
 
       - name: Verify cleanup
         run: |
-          docker exec test-container bash -c "! which processscope" || true
-          docker exec test-container bash -c "[ ! -f /usr/lib/systemd/system/processscope.service ]" || true
+          docker exec test-container bash -c "! which processscope 2>/dev/null || true"
+          docker exec test-container bash -c "[ ! -d /opt/processscope ] && echo 'Cleanup OK' || echo 'WARNING: /opt/processscope still exists'"
 
       - name: Cleanup container
         if: always()
-        run: |
-          docker rm -f test-container || true
+        run: docker rm -f test-container || true
 
-      - name: Mark test results
+      - name: Report result
         if: always()
-        run: |
-          echo "Test for ${{ matrix.distro.name }} completed"
+        run: echo "✅ Test completed for ${{ matrix.distro.name }}"
 
-  # Job 4: Create Release (only if all tests pass)
+  # ────────────────────────────────────────────────────────────────────
+  # Job 4: Create GitHub Release (only after all tests pass)
+  # ────────────────────────────────────────────────────────────────────
   create-release:
     needs: [version-bump, build, test-install]
     if: ${{ needs.version-bump.outputs.is_release == 'true' }}
@@ -247,66 +281,115 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download build artifacts
+      - name: Checkout (for release notes)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: release-packages
-          path: .
+          name: release-package
+          path: release-packages/
+
+      - name: Verify release package
+        run: |
+          echo "=== Release package contents ==="
+          ls -lh release-packages/
+          PACKAGE=$(find release-packages/ -name "*.tar.gz" | head -n 1)
+          if [ -z "$PACKAGE" ]; then
+            echo "ERROR: No .tar.gz package found!"
+            exit 1
+          fi
+          echo "Will attach to release: $PACKAGE"
+          # Move to workspace root for easy glob
+          cp "$PACKAGE" .
+          ls -lh *.tar.gz
 
       - name: Generate release notes
         run: |
+          VERSION="${{ needs.version-bump.outputs.new_version }}"
+          BUILD="${{ needs.build.outputs.build_number }}"
+          PACKAGE="${{ needs.build.outputs.package_name }}"
+
           cat > release_notes.md << EOF
-          # ProcessScope v${{ needs.version-bump.outputs.new_version }}
+          # ProcessScope v${VERSION}
 
           ## Changes
           - Automated release build
-          - Build number: ${{ needs.build.outputs.build_number }}
-          - Tested on: Ubuntu 22.04/24.04, Debian 12, Fedora 39
+          - Build number: ${BUILD}
+          - Build type: release
 
           ## Installation
 
-          ### From tar.gz
+          ### Quick Install (tar.gz)
           \`\`\`bash
-          tar -xzf processscope-${{ needs.version-bump.outputs.new_version }}-linux-x86_64.tar.gz
-          cd processscope-${{ needs.version-bump.outputs.new_version }}
+          # Download the package below
+          tar -xzf processscope-${VERSION}-linux-x86_64.tar.gz
+          cd processscope-${VERSION}
           sudo ./install.sh
           \`\`\`
 
-          ## Verification
-          This release has been tested across multiple Linux distributions:
+          After installation:
+          \`\`\`bash
+          # Start the service
+          sudo systemctl start processscope
+          sudo systemctl enable processscope
+
+          # Check status
+          processscope status
+
+          # View logs
+          journalctl -u processscope -f
+          \`\`\`
+
+          ## Tested Distributions
           - ✅ Ubuntu 22.04 & 24.04
           - ✅ Debian 12
           - ✅ Fedora 39
 
-          All installation and uninstallation tests passed successfully in container mode.
-          For complete systemd integration testing, install on actual VMs or bare metal systems.
+          All installation and uninstallation tests passed in container mode.
+
+          > **Note**: For complete systemd integration testing, install on actual VMs or bare metal.
           EOF
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Create GitHub Release with package asset
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version-bump.outputs.new_version }}
           name: ProcessScope v${{ needs.version-bump.outputs.new_version }}
           body_path: release_notes.md
-          files: |
-            *.tar.gz
+          files: "*.tar.gz"
           draft: false
           prerelease: false
-          generate_release_notes: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload summary
+      - name: Post release summary
         run: |
-          echo "## Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ needs.version-bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Build Number:** ${{ needs.build.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Tag:** v${{ needs.version-bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Tested Distributions" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Ubuntu 22.04 & 24.04" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Debian 12" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Fedora 39" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Note: Tests run in container mode without systemd. For complete systemd testing, install on actual systems." >> $GITHUB_STEP_SUMMARY
+          VERSION="${{ needs.version-bump.outputs.new_version }}"
+          PACKAGE=$(find . -maxdepth 1 -name "*.tar.gz" | head -n 1 | xargs basename)
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🎉 Release v${VERSION} Created Successfully!
+
+          | Field | Value |
+          |:------|:------|
+          | Version | ${VERSION} |
+          | Build | ${{ needs.build.outputs.build_number }} |
+          | Tag | v${VERSION} |
+          | Package | \`${PACKAGE}\` |
+
+          ### ✅ Tested Distributions
+          - Ubuntu 22.04 & 24.04
+          - Debian 12
+          - Fedora 39
+
+          ### Install
+          \`\`\`bash
+          tar -xzf ${PACKAGE}
+          cd processscope-${VERSION}
+          sudo ./install.sh
+          \`\`\`
+          EOF

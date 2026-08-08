@@ -121,6 +121,8 @@ class BaseCollector(ABC):
         self._collect_count: int = 0
         self._error_count: int = 0
         self._last_error: str = ""
+        # Set when the process exits naturally — used by engine monitor
+        self.process_exited: bool = False
         self._logger = get_logger(f"collector.{self.name}")
 
     @property
@@ -162,8 +164,7 @@ class BaseCollector(ABC):
         self._proc = psutil.Process(pid)
         self._event_queue = event_queue
         self._status = CollectorStatus.STARTING
-
-        self._logger.info("Starting collector", pid=pid, interval_ms=int(self._poll_interval * 1000))
+        self.process_exited = False
 
         self._status = CollectorStatus.RUNNING
         self._task = asyncio.create_task(self._run_loop())
@@ -171,7 +172,6 @@ class BaseCollector(ABC):
     async def stop(self) -> None:
         """Stop the collector gracefully."""
         self._status = CollectorStatus.STOPPING
-        self._logger.info("Stopping collector", pid=self._pid)
 
         if self._task:
             self._task.cancel()
@@ -181,7 +181,6 @@ class BaseCollector(ABC):
                 pass
 
         self._status = CollectorStatus.STOPPED
-        self._logger.info("Collector stopped", pid=self._pid, total_collections=self._collect_count)
 
     async def _run_loop(self) -> None:
         """Main collection loop."""
@@ -199,25 +198,50 @@ class BaseCollector(ABC):
 
             except asyncio.CancelledError:
                 break
+
+            except (psutil.NoSuchProcess, ProcessLookupError):
+                # Process is gone — stop quietly. The engine monitor will
+                # detect this and stop all collectors for this PID, emitting
+                # a single structured log line at that point.
+                self.process_exited = True
+                self._status = CollectorStatus.STOPPED
+                break
+
+            except psutil.ZombieProcess:
+                # Process became a zombie — treat same as exited
+                self.process_exited = True
+                self._status = CollectorStatus.STOPPED
+                break
+
             except Exception as e:
-                import psutil
-                if isinstance(e, (psutil.NoSuchProcess, ProcessLookupError)) or "process PID not found" in str(e):
-                    self._logger.info("Process exited, collector stopping", pid=self._pid)
+                # Check if the error message indicates a missing process
+                err_str = str(e)
+                if ("process no longer exists" in err_str
+                        or "process PID not found" in err_str
+                        or "No such process" in err_str):
+                    self.process_exited = True
                     self._status = CollectorStatus.STOPPED
                     break
 
                 self._error_count += 1
-                self._last_error = str(e)
-                self._logger.error(
-                    "Collection error",
-                    pid=self._pid,
-                    error=str(e),
-                    error_count=self._error_count,
-                    exc_info=True,
-                )
+                self._last_error = err_str
+
+                # Only log persistent, unexpected errors — not transient ones
+                if self._error_count <= 3 or self._error_count % 10 == 0:
+                    self._logger.error(
+                        "Collection error",
+                        pid=self._pid,
+                        error=err_str,
+                        error_count=self._error_count,
+                    )
+
                 if self._error_count > 50:
                     self._status = CollectorStatus.ERROR
-                    self._logger.critical("Too many errors, collector disabled", pid=self._pid)
+                    self._logger.critical(
+                        "Too many errors, collector disabled",
+                        pid=self._pid,
+                        error_count=self._error_count,
+                    )
                     break
 
             await asyncio.sleep(self._poll_interval)
@@ -248,6 +272,7 @@ class BaseCollector(ABC):
             "collect_count": self._collect_count,
             "error_count": self._error_count,
             "last_error": self._last_error,
+            "process_exited": self.process_exited,
         }
 
 

@@ -59,6 +59,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     await app_state.engine.start()
 
+    # Wire engine → attacher callback for process exit events
+    def _on_process_exited(pid: int, name: str) -> None:
+        app_state.attacher.mark_exited(pid)
+
+    app_state.engine.on_process_exited = _on_process_exited
+
     # Audit: service start
     audit = get_audit_logger(config.logging.file_path)
     build = get_build_info()
