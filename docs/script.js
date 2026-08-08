@@ -136,31 +136,33 @@ document.addEventListener("DOMContentLoaded", () => {
             
             latest.forEach(release => {
                 const card = document.createElement('div');
-                card.className = 'release-card';
+                card.className = 'release-card list-view';
                 
                 const dateStr = release.published_at ? new Date(release.published_at).toLocaleDateString() : 'N/A';
                 
                 let assetsHtml = '';
                 if (release.assets && release.assets.length > 0) {
                     assetsHtml = `<div class="release-assets">
-                        ${release.assets.map(asset => `<a href="${asset.browser_download_url}" class="asset-link">⬇ ${asset.name}</a>`).join('')}
+                        ${release.assets.map(asset => `<a href="${asset.browser_download_url}" class="asset-link primary">⬇ Download ${asset.name}</a>`).join('')}
                     </div>`;
                 } else {
                     assetsHtml = `<div class="release-assets">
                         <a href="${release.html_url}" target="_blank" class="asset-link">View on GitHub</a>
-                        <a href="${release.zipball_url}" class="asset-link">⬇ Source Code (zip)</a>
+                        <a href="${release.zipball_url}" class="asset-link primary">⬇ Source Code (zip)</a>
                     </div>`;
                 }
                 
-                const bodyText = release.body ? release.body.substring(0, 300) + (release.body.length > 300 ? '...' : '') : 'No description provided.';
-                
                 card.innerHTML = `
-                    <div class="release-header">
-                        <div class="release-version"><a href="${release.html_url}" target="_blank" style="color: inherit; text-decoration: none;">${release.name || release.tag_name}</a></div>
-                        <div class="release-date">${dateStr !== 'N/A' ? dateStr : ''}</div>
+                    <div class="release-header-compact">
+                        <div class="release-title-group">
+                            <div class="release-icon">📦</div>
+                            <div class="release-version"><a href="${release.html_url}" target="_blank" style="color: inherit; text-decoration: none;">ProcessScope ${release.name || release.tag_name}</a></div>
+                        </div>
+                        <div class="release-date">Released on ${dateStr !== 'N/A' ? dateStr : 'GitHub'}</div>
                     </div>
-                    <div class="release-body">${bodyText}</div>
-                    ${assetsHtml}
+                    <div class="release-actions-compact">
+                        ${assetsHtml}
+                    </div>
                 `;
                 releasesContainer.appendChild(card);
             });

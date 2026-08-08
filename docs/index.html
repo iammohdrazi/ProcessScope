@@ -54,36 +54,87 @@
 
     <section id="features" class="features-section">
         <h2>Powerful Observability Features</h2>
+        <p class="features-subtitle">Click on any feature to see how to use it.</p>
         <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🔍</div>
-                <h3>Process Hooking</h3>
-                <p>Attach instantly to any process by PID or name without restarting it.</p>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">🔍</div>
+                        <h3>Process Hooking</h3>
+                        <p>Attach instantly to any process by PID or name without restarting it.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>How to use</h3>
+                        <code>processscope attach --pid 1234</code>
+                        <p>Zero-configuration dynamic eBPF instrumentation.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3>CPU Telemetry</h3>
-                <p>Monitor per-core usage, context switches, and scheduling in real-time.</p>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">⚡</div>
+                        <h3>CPU Telemetry</h3>
+                        <p>Monitor per-core usage, context switches, and scheduling in real-time.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Dashboard View</h3>
+                        <p>Detailed flame graphs and CPU scheduling timelines.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">🧠</div>
-                <h3>Memory Monitoring</h3>
-                <p>Track heap, stack, RSS, VMA, page faults, and detect memory leaks.</p>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">🧠</div>
+                        <h3>Memory Monitoring</h3>
+                        <p>Track heap, stack, RSS, VMA, page faults, and detect memory leaks.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Memory Insights</h3>
+                        <p>Live visualization of virtual memory areas and allocations.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌐</div>
-                <h3>Network Tracker</h3>
-                <p>Observe TCP/UDP connections, bandwidth, and latency at a glance.</p>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">🌐</div>
+                        <h3>Network Tracker</h3>
+                        <p>Observe TCP/UDP connections, bandwidth, and latency at a glance.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Network Tracing</h3>
+                        <p>See all active sockets and packet-level details in real time.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📁</div>
-                <h3>File System Activity</h3>
-                <p>Trace open files, file descriptors, reads, and writes transparently.</p>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">📁</div>
+                        <h3>File System Activity</h3>
+                        <p>Trace open files, file descriptors, reads, and writes transparently.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>I/O Monitoring</h3>
+                        <p>Detect slow I/O and track which files your process is accessing.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Unified Dashboard</h3>
-                <p>Correlate all telemetry via a live web dashboard and timeline.</p>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">📊</div>
+                        <h3>Unified Dashboard</h3>
+                        <p>Correlate all telemetry via a live web dashboard and timeline.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Access UI</h3>
+                        <code>http://localhost:9876</code>
+                        <p>A beautiful React-based dashboard for process insights.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
