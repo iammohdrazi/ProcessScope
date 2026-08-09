@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ProcessScope - A professional Linux-native process observability platform to inspect, debug, and monitor processes in real-time.">
+    <title>ProcessScope | Linux Process Observability Platform</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%230ea5e9' stroke-width='10'/%3E%3Cpath d='M30 50 A 20 20 0 0 1 70 50' fill='none' stroke='%2338bdf8' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%230284c7'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="#" class="logo">
+            <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#0ea5e9" stroke-width="10"/>
+                <path d="M30 50 A 20 20 0 0 1 70 50" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="50" cy="50" r="10" fill="#0284c7"/>
+            </svg>
+            <span>ProcessScope</span>
+        </a>
+        <div class="nav-links">
+            <a href="#about">About</a>
+            <a href="#features">Features</a>
+            <a href="#releases">Download</a>
+            <a href="#quick-start">Quick Start</a>
+            <a href="#support">Support</a>
+            <a href="https://github.com/iammohdrazi/ProcessScope" target="_blank">Contribute</a>
+            <a href="https://github.com/iammohdrazi/ProcessScope" target="_blank">GitHub</a>
+        </div>
+    </nav>
+
+    <header class="hero" id="about">
+        <div class="hero-content">
+            <h1>Deep Visibility into <span class="highlight">Linux Processes</span></h1>
+            <p>Attach, inspect, and analyze any running Linux process in real-time with our unified telemetry engine.</p>
+            <div class="cta-group">
+                <a href="#releases" class="btn btn-primary">Download Latest</a>
+                <a href="#quick-start" class="btn btn-secondary">Quick Start</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="terminal-body" id="terminal-text"></div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features-section">
+        <h2>Powerful Observability Features</h2>
+        <p class="features-subtitle">Click to see more info.</p>
+        <div class="features-grid">
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">🔍</div>
+                        <h3>Process Hooking</h3>
+                        <p>Attach instantly to any process by PID or name without restarting it.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>How to use</h3>
+                        <code>processscope attach --pid 1234</code>
+                        <p>Zero-configuration dynamic eBPF instrumentation.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">⚡</div>
+                        <h3>CPU Telemetry</h3>
+                        <p>Monitor per-core usage, context switches, and scheduling in real-time.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Dashboard View</h3>
+                        <p>Detailed flame graphs and CPU scheduling timelines.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">🧠</div>
+                        <h3>Memory Monitoring</h3>
+                        <p>Track heap, stack, RSS, VMA, page faults, and detect memory leaks.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Memory Insights</h3>
+                        <p>Live visualization of virtual memory areas and allocations.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">🌐</div>
+                        <h3>Network Tracker</h3>
+                        <p>Observe TCP/UDP connections, bandwidth, and latency at a glance.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Network Tracing</h3>
+                        <p>See all active sockets and packet-level details in real time.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card" onclick="this.classList.toggle('flipped')">
+                <div class="feature-inner">
+                    <div class="feature-front">
+                        <div class="feature-icon">📊</div>
+                        <h3>Unified Dashboard</h3>
+                        <p>Correlate all telemetry via a live web dashboard and timeline.</p>
+                    </div>
+                    <div class="feature-back">
+                        <h3>Access UI</h3>
+                        <code>http://localhost:9876</code>
+                        <p>A beautiful React-based dashboard for process insights.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="releases" class="releases-section">
+        <h2>Releases &amp; Downloads</h2>
+        <div id="releases-container" class="releases-container">
+            <div class="loading-spinner">Loading releases...</div>
+        </div>
+    </section>
+
+    <section id="quick-start" class="quickstart-section">
+        <h2>Quick Start</h2>
+        <div class="code-container">
+            <div class="code-header">Install &amp; Run</div>
+            <pre><code># Clone the repository
+git clone https://github.com/iammohdrazi/ProcessScope.git
+cd ProcessScope
+
+# Install in development mode
+make install
+
+# Start the observability server
+sudo .venv/bin/processscope start
+
+# Dashboard available at http://localhost:9876</code></pre>
+            <button class="copy-btn" id="copy-btn">Copy</button>
+        </div>
+    </section>
+
+    <section id="support" class="support-section">
+        <h2>Get Support &amp; Documentation</h2>
+        <div class="support-links">
+            <a href="https://github.com/iammohdrazi/ProcessScope/issues" target="_blank" class="support-card">
+                <div class="support-icon">🐛</div>
+                <h3>Issue Tracker</h3>
+                <p>Report bugs or request new features on our GitHub Issues page.</p>
+            </a>
+            <a href="https://github.com/iammohdrazi/ProcessScope/blob/main/README.md" target="_blank" class="support-card">
+                <div class="support-icon">📖</div>
+                <h3>Manuals &amp; Docs</h3>
+                <p>Read detailed documentation, guides, and manuals for setup and usage.</p>
+            </a>
+            <a href="https://github.com/iammohdrazi/ProcessScope/blob/main/CONTRIBUTING.md" target="_blank" class="support-card">
+                <div class="support-icon">🤝</div>
+                <h3>Contribute</h3>
+                <p>Learn how to contribute code, report issues, and join the community.</p>
+            </a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <svg class="logo-icon-footer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#0ea5e9" stroke-width="10"/>
+                    <path d="M30 50 A 20 20 0 0 1 70 50" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+                    <circle cx="50" cy="50" r="10" fill="#0284c7"/>
+                </svg>
+                <span>ProcessScope</span>
+            </div>
+            <p>Licensed under GNU General Public License v2.0 &mdash; See <a href="https://github.com/iammohdrazi/ProcessScope/blob/main/LICENSE" target="_blank">LICENSE</a> for details.</p>
+        </div>
+    </footer>
+
+    <script src="script.js?v=7"></script>
+</body>
+</html>
