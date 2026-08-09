@@ -8,7 +8,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)]()
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)]()
-[![License](https://img.shields.io/badge/license-Apache%202.0-orange.svg)]()
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)]()
 
 ---
@@ -204,4 +204,10 @@ See [scripts/README.md](scripts/README.md) for workflow details and manual testi
 
 ## License
 
-Apache License 2.0 — See [LICENSE](LICENSE) for details.
+ProcessScope is free and open-source software licensed under the **GNU General Public License version 2.0 (GPL-2.0)**.
+
+You are free to use, study, modify, and redistribute ProcessScope under the terms of the GPL-2.0 license.
+
+See the [`LICENSE`](LICENSE) file for the complete license text and terms.
+
+**SPDX-License-Identifier: GPL-2.0-only**
